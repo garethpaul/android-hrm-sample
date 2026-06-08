@@ -23,8 +23,21 @@ Pre-requisites
 --------------
 
 - Android SDK v22
-- Android Build Tools v22.0.1
+- Android build-tools 24.0.3
 - Android Support Repository
+
+Local verification also expects the legacy Gradle stack checked into this repo:
+
+- Gradle wrapper 2.2.1
+- Android Gradle Plugin 1.0.0
+- Android support libraries 21.0.2
+
+Configure an Android SDK path before running Gradle:
+
+```sh
+export ANDROID_HOME=/home/gjones/android-sdk
+export ANDROID_SDK_ROOT=/home/gjones/android-sdk
+```
 
 Screenshots
 -------------
@@ -36,6 +49,24 @@ Getting Started
 
 This sample uses the Gradle build system. To build this project, use the
 "gradlew build" command or use "Import Project" in Android Studio.
+
+Run the SDK-free baseline check before Gradle:
+
+```sh
+scripts/check-baseline.sh
+```
+
+Then run Gradle with a compatible Android SDK:
+
+```sh
+ANDROID_HOME=/home/gjones/android-sdk ANDROID_SDK_ROOT=/home/gjones/android-sdk ./gradlew tasks --no-daemon
+ANDROID_HOME=/home/gjones/android-sdk ANDROID_SDK_ROOT=/home/gjones/android-sdk ./gradlew assembleDebug --no-daemon
+```
+
+This baseline keeps the sample on its legacy Gradle and support library stack
+while using HTTPS Maven Central and host-compatible Android build-tools. A
+future modernization pass should update Gradle, Android Gradle Plugin, AndroidX,
+target SDK behavior, BLE runtime permissions, and device-backed tests together.
 
 Support
 -------
