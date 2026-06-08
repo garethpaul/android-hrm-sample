@@ -16,7 +16,7 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Stop"
+        android:text="@string/menu_stop"
         android:id="@+id/stopBtn"
         android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true"

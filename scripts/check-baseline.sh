@@ -4,6 +4,9 @@ set -eu
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 BUILD_FILE="$ROOT_DIR/Application/build.gradle"
 CONTROL_ACTIVITY="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java"
+SCAN_ACTIVITY="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/DeviceScanActivity.java"
+README="$ROOT_DIR/README.md"
+RES_DIR="$ROOT_DIR/Application/src/main/res"
 
 require_contains() {
   pattern=$1
@@ -64,6 +67,87 @@ fi
 
 if ! grep -Fq "charaProp & BluetoothGattCharacteristic.PROPERTY_NOTIFY" "$CONTROL_ACTIVITY"; then
   printf '%s\n' "Notify-property check is missing." >&2
+  exit 1
+fi
+
+if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
+  printf '%s\n' "CHANGES.md is missing." >&2
+  exit 1
+fi
+
+if grep -Fq "inflate(com.garethpaul.app.hrm.R.layout.listitem_device, null)" "$SCAN_ACTIVITY"; then
+  printf '%s\n' "Device row inflation must use the parent ViewGroup." >&2
+  exit 1
+fi
+
+if ! grep -Fq 'android:allowBackup="false"' "$ROOT_DIR/Application/src/main/AndroidManifest.xml"; then
+  printf '%s\n' "Application backup behavior must be explicit." >&2
+  exit 1
+fi
+
+if [ ! -f "$RES_DIR/drawable-nodpi/tile.9.png" ]; then
+  printf '%s\n' "Tile background must stay in drawable-nodpi." >&2
+  exit 1
+fi
+
+if [ -f "$RES_DIR/drawable-hdpi/tile.9.png" ]; then
+  printf '%s\n' "Single-density tile background must not be restored." >&2
+  exit 1
+fi
+
+for file in "$RES_DIR/values/template-dimens.xml" "$RES_DIR/values-sw600dp/template-dimens.xml"; do
+  if [ -f "$file" ]; then
+    printf '%s\n' "Unused template dimen file must not be restored: $file" >&2
+    exit 1
+  fi
+done
+
+for pattern in "intro_message" "label_data" "label_device_address" "label_state" "title_devices"; do
+  if grep -R -Fq "$pattern" "$RES_DIR/values"; then
+    printf '%s\n' "Unused template string must not be restored: $pattern" >&2
+    exit 1
+  fi
+done
+
+if grep -R -Eq 'textSize="[0-9]+dp"' "$RES_DIR/layout"; then
+  printf '%s\n' "Text sizes must use sp units." >&2
+  exit 1
+fi
+
+if grep -R -Eq 'android:text="[^@]' "$RES_DIR/layout"; then
+  printf '%s\n' "Layout text must use string resources." >&2
+  exit 1
+fi
+
+for menu in main gatt_services; do
+  if ! grep -Fq 'android:title="@string/menu_refresh"' "$RES_DIR/menu/$menu.xml"; then
+    printf '%s\n' "Refresh menu item must have a title: $menu.xml" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "LintError" "$ROOT_DIR/Application/lint.xml"; then
+  printf '%s\n' "lint.xml must document the obsolete lint API database limitation." >&2
+  exit 1
+fi
+
+if ! grep -Fq "IconMissingDensityFolder" "$ROOT_DIR/Application/lint.xml"; then
+  printf '%s\n' "lint.xml must document the nodpi bitmap asset baseline." >&2
+  exit 1
+fi
+
+if ! grep -Fq "./gradlew lint --no-daemon" "$README"; then
+  printf '%s\n' "README must document Gradle lint verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "./gradlew check --no-daemon" "$README"; then
+  printf '%s\n' "README must document Gradle check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "./gradlew assembleDebug --no-daemon" "$README"; then
+  printf '%s\n' "README must document Gradle build verification." >&2
   exit 1
 fi
 

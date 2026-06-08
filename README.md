@@ -59,14 +59,18 @@ scripts/check-baseline.sh
 Then run Gradle with a compatible Android SDK:
 
 ```sh
-ANDROID_HOME=/home/gjones/android-sdk ANDROID_SDK_ROOT=/home/gjones/android-sdk ./gradlew tasks --no-daemon
+ANDROID_HOME=/home/gjones/android-sdk ANDROID_SDK_ROOT=/home/gjones/android-sdk ./gradlew lint --no-daemon
+ANDROID_HOME=/home/gjones/android-sdk ANDROID_SDK_ROOT=/home/gjones/android-sdk ./gradlew check --no-daemon
 ANDROID_HOME=/home/gjones/android-sdk ANDROID_SDK_ROOT=/home/gjones/android-sdk ./gradlew assembleDebug --no-daemon
 ```
 
 This baseline keeps the sample on its legacy Gradle and support library stack
-while using HTTPS Maven Central and host-compatible Android build-tools. A
-future modernization pass should update Gradle, Android Gradle Plugin, AndroidX,
-target SDK behavior, BLE runtime permissions, and device-backed tests together.
+while using HTTPS Maven Central and host-compatible Android build-tools.
+`Application/lint.xml` suppresses only the obsolete lint API database error from
+this old toolchain and the missing-density-folder warning for bitmap assets
+intentionally kept in `drawable-nodpi`. A future modernization pass should
+update Gradle, Android Gradle Plugin, AndroidX, target SDK behavior, BLE runtime
+permissions, and device-backed tests together.
 
 Support
 -------
