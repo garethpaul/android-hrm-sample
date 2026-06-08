@@ -3,6 +3,7 @@ set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 BUILD_FILE="$ROOT_DIR/Application/build.gradle"
+CONTROL_ACTIVITY="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java"
 
 require_contains() {
   pattern=$1
@@ -43,6 +44,26 @@ require_contains "com.android.support:cardview-v7:21.0.2" \
 
 if ! grep -Fq "Android build-tools 24.0.3" "$ROOT_DIR/README.md"; then
   printf '%s\n' "README must document the pinned Android build-tools version." >&2
+  exit 1
+fi
+
+if grep -Fq "charaProp | BluetoothGattCharacteristic.PROPERTY_READ" "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "Read-property check must use bitwise AND, not OR." >&2
+  exit 1
+fi
+
+if grep -Fq "charaProp | BluetoothGattCharacteristic.PROPERTY_NOTIFY" "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "Notify-property check must use bitwise AND, not OR." >&2
+  exit 1
+fi
+
+if ! grep -Fq "charaProp & BluetoothGattCharacteristic.PROPERTY_READ" "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "Read-property check is missing." >&2
+  exit 1
+fi
+
+if ! grep -Fq "charaProp & BluetoothGattCharacteristic.PROPERTY_NOTIFY" "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "Notify-property check is missing." >&2
   exit 1
 fi
 
