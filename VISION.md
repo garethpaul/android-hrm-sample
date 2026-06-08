@@ -1,5 +1,9 @@
 ## Android HRM Sample Vision
 
+This document explains the current state and direction of the project.
+Project overview and developer docs: [`README.md`](README.md)
+Contribution guide: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+
 Android HRM Sample is a Bluetooth LE sample based on Android's Bluetooth GATT
 example. It scans for nearby BLE devices, connects to GATT services, and
 displays service and characteristic data.
