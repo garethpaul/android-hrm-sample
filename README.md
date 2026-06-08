@@ -1,5 +1,8 @@
 # android-hrm-sample
 
+<!-- README-OVERVIEW-IMAGE -->
+![Project overview](docs/readme-overview.svg)
+
 ## Overview
 
 `garethpaul/android-hrm-sample` is an Android application or sample. Android Heart Rate Monitor
@@ -79,4 +82,3 @@ Keep changes small and tied to the project that is already present in this repos
 Prior README summary:
 
 > android-hrm-sample <!-- README-OVERVIEW-IMAGE --> Android BluetoothLeGatt Sample =================================== This sample demonstrates how to use the Bluetooth LE Generic Attribute Profile (GATT) to transmit arbitrary data between devices. Introduction ------------ This sample shows a list of available Bluetooth LE devices and provides an interface to connect, display data and display GATT services and characteristics supported by the devices.
-
