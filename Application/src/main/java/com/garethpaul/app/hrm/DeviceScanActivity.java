@@ -34,6 +34,14 @@ public class DeviceScanActivity extends ListActivity {
     private static final int REQUEST_ENABLE_BT = 1;
     // Stops scanning after 10 seconds.
     private static final long SCAN_PERIOD = 10000;
+    private final Runnable mStopScanRunnable = new Runnable() {
+        @Override
+        public void run() {
+            mScanning = false;
+            mBluetoothAdapter.stopLeScan(mLeScanCallback);
+            invalidateOptionsMenu();
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -136,8 +144,7 @@ public class DeviceScanActivity extends ListActivity {
         intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_NAME, device.getName());
         intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_ADDRESS, device.getAddress());
         if (mScanning) {
-            mBluetoothAdapter.stopLeScan(mLeScanCallback);
-            mScanning = false;
+            scanLeDevice(false);
         }
         startActivity(intent);
     }
@@ -145,18 +152,13 @@ public class DeviceScanActivity extends ListActivity {
     private void scanLeDevice(final boolean enable) {
         if (enable) {
             // Stops scanning after a pre-defined scan period.
-            mHandler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    mScanning = false;
-                    mBluetoothAdapter.stopLeScan(mLeScanCallback);
-                    invalidateOptionsMenu();
-                }
-            }, SCAN_PERIOD);
+            mHandler.removeCallbacks(mStopScanRunnable);
+            mHandler.postDelayed(mStopScanRunnable, SCAN_PERIOD);
 
             mScanning = true;
             mBluetoothAdapter.startLeScan(mLeScanCallback);
         } else {
+            mHandler.removeCallbacks(mStopScanRunnable);
             mScanning = false;
             mBluetoothAdapter.stopLeScan(mLeScanCallback);
         }

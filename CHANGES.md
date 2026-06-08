@@ -2,6 +2,10 @@
 
 ## 2026-06-08
 
+- Added a BLE address validation contract so connection attempts reject invalid
+  device addresses before calling Android's `getRemoteDevice` API.
+- Made the BLE scan timeout callback cancellable so pause and navigation stop
+  paths do not leave stale scan-stop work queued.
 - Added a repository changelog and expanded the documented Android verification
   gate to include lint, Gradle check, and debug assembly.
 - Cleaned Android lint findings by making backup behavior explicit, fixing

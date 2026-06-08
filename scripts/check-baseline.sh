@@ -70,6 +70,11 @@ if ! grep -Fq "charaProp & BluetoothGattCharacteristic.PROPERTY_NOTIFY" "$CONTRO
   exit 1
 fi
 
+if ! grep -Fq "BluetoothAdapter.checkBluetoothAddress(address)" "$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java"; then
+  printf '%s\n' "BLE connection must validate device addresses before getRemoteDevice." >&2
+  exit 1
+fi
+
 if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   printf '%s\n' "CHANGES.md is missing." >&2
   exit 1
@@ -77,6 +82,21 @@ fi
 
 if grep -Fq "inflate(com.garethpaul.app.hrm.R.layout.listitem_device, null)" "$SCAN_ACTIVITY"; then
   printf '%s\n' "Device row inflation must use the parent ViewGroup." >&2
+  exit 1
+fi
+
+if ! grep -Fq "private final Runnable mStopScanRunnable" "$SCAN_ACTIVITY"; then
+  printf '%s\n' "BLE scan timeout must be cancellable." >&2
+  exit 1
+fi
+
+if ! grep -Fq "mHandler.removeCallbacks(mStopScanRunnable)" "$SCAN_ACTIVITY"; then
+  printf '%s\n' "BLE scan timeout callbacks must be removed when scanning stops." >&2
+  exit 1
+fi
+
+if ! grep -Fq "scanLeDevice(false);" "$SCAN_ACTIVITY"; then
+  printf '%s\n' "BLE scan stop paths must use scanLeDevice(false)." >&2
   exit 1
 fi
 
