@@ -1,110 +1,82 @@
 # android-hrm-sample
 
-<!-- README-OVERVIEW-IMAGE -->
-![Project overview](docs/readme-overview.svg)
+## Overview
 
-Android BluetoothLeGatt Sample
-===================================
+`garethpaul/android-hrm-sample` is an Android application or sample. Android Heart Rate Monitor
 
-This sample demonstrates how to use the Bluetooth LE Generic Attribute Profile (GATT)
-to transmit arbitrary data between devices.
+This README is based on the checked-in source, manifests, scripts, and repository metadata on the `master` branch. The project language mix found during review was: Java (4), shell (1).
 
-Introduction
-------------
+## Repository Contents
 
-This sample shows a list of available Bluetooth LE devices and provides
-an interface to connect, display data and display GATT services and
-characteristics supported by the devices.
+- `README.md` - project overview and local usage notes
+- `build.gradle` - Android or Gradle build configuration
+- `.google` - source or example code
+- `Application` - source or example code
+- `docs` - source or example code
+- `gradle` - source or example code
+- `gradlew` - Android or Gradle build configuration
+- `scripts` - source or example code
+- `SECURITY.md` - security reporting and disclosure guidance
+- `VISION.md` - project direction and maintenance guardrails
 
-It creates a [Service][1] for managing connection and data communication with a GATT server
-hosted on a given Bluetooth LE device.
+Additional scan context:
 
-The Activities communicate with the Service, which in turn interacts with the [Bluetooth LE API][2].
+- Source directories: .google, Application, docs, gradle, scripts
+- Dependency and build manifests: build.gradle, gradlew
+- Entry points or build surfaces: Gradle build files
+- Test-looking files: no obvious test files detected
 
-[1]:http://developer.android.com/reference/android/app/Service.html
-[2]:https://developer.android.com/reference/android/bluetooth/BluetoothGatt.html
+## Getting Started
 
-Pre-requisites
---------------
+### Prerequisites
 
-- Android SDK v22
-- Android build-tools 24.0.3
-- Android Support Repository
+- Git
+- Android Studio or a compatible Android SDK
+- Gradle or the checked-in Gradle wrapper when present
 
-Local verification also expects the legacy Gradle stack checked into this repo:
+### Setup
 
-- Gradle wrapper 2.2.1
-- Android Gradle Plugin 1.0.0
-- Android support libraries 21.0.2
-
-Configure an Android SDK path before running Gradle:
-
-```sh
-export ANDROID_HOME=/home/gjones/android-sdk
-export ANDROID_SDK_ROOT=/home/gjones/android-sdk
+```bash
+git clone https://github.com/garethpaul/android-hrm-sample.git
+cd android-hrm-sample
 ```
 
-Screenshots
--------------
+The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
 
-<img src="screenshots/1-main.png" height="400" alt="Screenshot"/> <img src="screenshots/2-detail.png" height="400" alt="Screenshot"/> 
+## Running or Using the Project
 
-Getting Started
----------------
+- Use Android Studio to open the project or run `./gradlew assembleDebug` when the Android SDK is configured.
 
-This sample uses the Gradle build system. To build this project, use the
-"gradlew build" command or use "Import Project" in Android Studio.
+## Testing and Verification
 
-Run the SDK-free baseline check before Gradle:
+- `./gradlew test` or Android Studio's test runner when the SDK is configured
 
-```sh
-scripts/check-baseline.sh
-```
+When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
-Then run Gradle with a compatible Android SDK:
+## Configuration and Secrets
 
-```sh
-ANDROID_HOME=/home/gjones/android-sdk ANDROID_SDK_ROOT=/home/gjones/android-sdk ./gradlew lint --no-daemon
-ANDROID_HOME=/home/gjones/android-sdk ANDROID_SDK_ROOT=/home/gjones/android-sdk ./gradlew check --no-daemon
-ANDROID_HOME=/home/gjones/android-sdk ANDROID_SDK_ROOT=/home/gjones/android-sdk ./gradlew assembleDebug --no-daemon
-```
+- No required secret or credential file was identified in the repository scan. If you add integrations later, keep secrets out of git.
 
-This baseline keeps the sample on its legacy Gradle and support library stack
-while using HTTPS Maven Central and host-compatible Android build-tools.
-`Application/lint.xml` suppresses only the obsolete lint API database error from
-this old toolchain and the missing-density-folder warning for bitmap assets
-intentionally kept in `drawable-nodpi`. A future modernization pass should
-update Gradle, Android Gradle Plugin, AndroidX, target SDK behavior, BLE runtime
-permissions, and device-backed tests together.
+## Security and Privacy Notes
 
-Support
--------
+- Review changes touching network requests, sockets, or service endpoints; examples from the scan include Application/build.gradle, Application/src/main/AndroidManifest.xml, Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java, Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java, and 6 more.
+- Review changes touching mobile permissions or privacy-sensitive device data; examples from the scan include .google/packaging.yaml, Application/src/main/AndroidManifest.xml, Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java, Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java, and 6 more.
+- Review changes touching file, media, JSON, XML, CSV, OCR, or data parsing; examples from the scan include Application/lint.xml, Application/src/main/AndroidManifest.xml, Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java, Application/src/main/res/layout/gatt_services_characteristics.xml, and 6 more.
+- Review changes touching database, model, or persistence code; examples from the scan include docs/plans/2026-06-08-hrm-build-baseline.md.
 
-- Google+ Community: https://plus.google.com/communities/105153134372062985968
-- Stack Overflow: http://stackoverflow.com/questions/tagged/android
+## Maintenance Notes
 
-If you've found an error in this sample, please file an issue:
-https://github.com/googlesamples/android-BluetoothLeGatt
+- This looks like a legacy Android project or sample. Expect Android SDK, Gradle, and support-library versions to matter.
+- See `SECURITY.md` for vulnerability reporting and safe research guidance.
+- See `VISION.md` for project direction and contribution guardrails.
 
-Patches are encouraged, and may be submitted by forking this project and
-submitting a pull request through GitHub. Please see CONTRIBUTING.md for more details.
+## Contributing
 
-License
--------
+Keep changes small and tied to the project that is already present in this repository. For code changes, document the toolchain used, avoid committing generated dependency directories or local configuration, and update this README when setup or verification steps change.
 
-Copyright 2014 The Android Open Source Project, Inc.
+## Existing Project Notes
 
-Licensed to the Apache Software Foundation (ASF) under one or more contributor
-license agreements.  See the NOTICE file distributed with this work for
-additional information regarding copyright ownership.  The ASF licenses this
-file to you under the Apache License, Version 2.0 (the "License"); you may not
-use this file except in compliance with the License.  You may obtain a copy of
-the License at
+Prior README summary:
 
-http://www.apache.org/licenses/LICENSE-2.0
+> android-hrm-sample <!-- README-OVERVIEW-IMAGE --> Android BluetoothLeGatt Sample =================================== This sample demonstrates how to use the Bluetooth LE Generic Attribute Profile (GATT) to transmit arbitrary data between devices. Introduction ------------ This sample shows a list of available Bluetooth LE devices and provides an interface to connect, display data and display GATT services and characteristics supported by the devices.
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
-License for the specific language governing permissions and limitations under
-the License.
