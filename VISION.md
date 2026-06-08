@@ -42,7 +42,6 @@ Canonical security policy and reporting:
 
 - [`SECURITY.md`](SECURITY.md)
 
-
 Bluetooth device identifiers and health-related measurements can be sensitive.
 Changes should avoid unnecessary logging, analytics, or network transmission of
 device names, addresses, or heart-rate data.
