@@ -76,9 +76,3 @@ When the required SDK or runtime is unavailable, use static checks and source re
 ## Contributing
 
 Keep changes small and tied to the project that is already present in this repository. For code changes, document the toolchain used, avoid committing generated dependency directories or local configuration, and update this README when setup or verification steps change.
-
-## Existing Project Notes
-
-Prior README summary:
-
-> android-hrm-sample Android BluetoothLeGatt Sample =================================== This sample demonstrates how to use the Bluetooth LE Generic Attribute Profile (GATT) to transmit arbitrary data between devices. Introduction ------------ This sample shows a list of available Bluetooth LE devices and provides an interface to connect, display data and display GATT services and characteristics supported by the devices.
