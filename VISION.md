@@ -51,3 +51,6 @@ needed for the Android versions being supported.
 - BLE rewrites without hardware verification notes
 - Permission changes that broaden access without rationale
 - Attribution or license removals
+
+This list is a roadmap guardrail, not a permanent rule.
+Strong user demand and strong technical rationale can change it.
