@@ -45,7 +45,7 @@ device names, addresses, or heart-rate data.
 Modern permission work should request only the Bluetooth and location access
 needed for the Android versions being supported.
 
-## What We Will Not Merge For Now
+## What We Will Not Merge (For Now)
 
 - Health-data collection beyond demonstrable sample behavior
 - BLE rewrites without hardware verification notes
