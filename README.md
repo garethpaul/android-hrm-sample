@@ -1,3 +1,8 @@
+# android-hrm-sample
+
+<!-- README-OVERVIEW-IMAGE -->
+![Project overview](docs/readme-overview.svg)
+
 Android BluetoothLeGatt Sample
 ===================================
 
