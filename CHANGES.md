@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-09
+
+- Guarded the heart-rate client-config descriptor before notification writes
+  and made disable requests write the BLE disable descriptor value.
+
 ## 2026-06-08
 
 - Added `make check` as the root wrapper for HRM source, lint, Gradle check,

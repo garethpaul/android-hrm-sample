@@ -23,6 +23,7 @@ Priority:
 - Preserve the sample's source layout and Android support dependencies
 - Make SDK and build-tool assumptions visible
 - Keep heart-rate characteristic matching tied to standard GATT UUIDs
+- Keep heart-rate notification descriptor writes null-safe and reversible
 - Avoid changing BLE behavior without device or emulator verification notes
 
 Next priorities:

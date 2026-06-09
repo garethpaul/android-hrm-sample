@@ -284,7 +284,15 @@ public class BluetoothLeService extends Service {
         if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
             BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
                     UUID.fromString(SampleGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
-            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+            if (descriptor == null) {
+                Log.w(TAG, "Heart rate notification descriptor is missing.");
+                return;
+            }
+
+            byte[] descriptorValue = enabled
+                    ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE;
+            descriptor.setValue(descriptorValue);
             mBluetoothGatt.writeDescriptor(descriptor);
         }
     }

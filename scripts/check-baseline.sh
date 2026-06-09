@@ -5,6 +5,7 @@ ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 BUILD_FILE="$ROOT_DIR/Application/build.gradle"
 CONTROL_ACTIVITY="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java"
 SCAN_ACTIVITY="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/DeviceScanActivity.java"
+BLE_SERVICE="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java"
 README="$ROOT_DIR/README.md"
 RES_DIR="$ROOT_DIR/Application/src/main/res"
 
@@ -80,8 +81,26 @@ if ! grep -Fq "SampleGattAttributes.HEART_RATE_MEASUREMENT.equals(uuid)" "$CONTR
   exit 1
 fi
 
-if ! grep -Fq "BluetoothAdapter.checkBluetoothAddress(address)" "$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java"; then
+if ! grep -Fq "BluetoothAdapter.checkBluetoothAddress(address)" "$BLE_SERVICE"; then
   printf '%s\n' "BLE connection must validate device addresses before getRemoteDevice." >&2
+  exit 1
+fi
+
+for pattern in \
+  "if (descriptor == null)" \
+  "Heart rate notification descriptor is missing." \
+  "byte[] descriptorValue = enabled" \
+  "BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE" \
+  "descriptor.setValue(descriptorValue);" \
+  "mBluetoothGatt.writeDescriptor(descriptor);"; do
+  if ! grep -Fq "$pattern" "$BLE_SERVICE"; then
+    printf '%s\n' "Missing heart-rate notification descriptor guard: $pattern" >&2
+    exit 1
+  fi
+done
+
+if grep -Fq "descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);" "$BLE_SERVICE"; then
+  printf '%s\n' "Heart-rate notification disable path must not write the enable descriptor value." >&2
   exit 1
 fi
 

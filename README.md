@@ -70,6 +70,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 
 - No required secret or credential file was identified in the repository scan. If you add integrations later, keep secrets out of git.
 - This legacy Android baseline pins Android build-tools 24.0.3 and Android support libraries 21.0.2.
+- Heart-rate notification descriptor writes are null-guarded and use the
+  matching enable or disable descriptor value.
 
 ## Security and Privacy Notes
 
@@ -92,6 +94,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   wrapper baseline.
 - See `docs/plans/2026-06-09-hrm-heart-rate-characteristic-match.md` for the
   heart-rate characteristic matching contract.
+- See `docs/plans/2026-06-09-hrm-notification-descriptor-guard.md` for the
+  heart-rate notification descriptor contract.
 
 ## Contributing
 
