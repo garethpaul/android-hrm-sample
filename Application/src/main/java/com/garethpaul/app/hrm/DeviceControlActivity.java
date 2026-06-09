@@ -135,8 +135,10 @@ public class DeviceControlActivity extends Activity {
     };
 
     private void clearUI() {
-        mDataField.setText(com.garethpaul.app
-                .hrm.R.string.no_data);
+        if (mDataField != null) {
+            mDataField.setText(com.garethpaul.app
+                    .hrm.R.string.no_data);
+        }
     }
 
     @Override
@@ -229,7 +231,7 @@ public class DeviceControlActivity extends Activity {
     }
 
     private void displayData(String data) {
-        if (data != null) {
+        if (data != null && mDataField != null) {
             mDataField.setText(data);
         }
     }

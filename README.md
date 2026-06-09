@@ -82,6 +82,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   adapters, and null scan callback devices.
 - Scan and GATT control activities guard nullable ActionBar setup before
   applying title or up-navigation presentation.
+- GATT data-field updates guard missing data views so stale control layouts do
+  not crash disconnect or data-available paths.
 
 ## Security and Privacy Notes
 
@@ -114,6 +116,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   lifecycle and callback null guards.
 - See `docs/plans/2026-06-09-hrm-broadcast-privacy.md` for the package-scoped
   GATT broadcast and heart-rate logging contract.
+- See `docs/plans/2026-06-09-hrm-data-field-guard.md` for GATT data-field
+  null guards.
 
 ## Contributing
 

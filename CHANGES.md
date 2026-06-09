@@ -2,6 +2,9 @@
 
 ## 2026-06-09
 
+- Guarded GATT data-field updates when stale control layouts omit the data
+  value view.
+- Added SDK-free baseline coverage for GATT data-field null guards.
 - Guarded BLE scan lifecycle paths against missing Bluetooth adapters, handlers,
   stopped list adapters, and null scan callback devices.
 - Scoped GATT update broadcasts to the app package and stopped logging exact

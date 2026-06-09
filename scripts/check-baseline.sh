@@ -109,6 +109,16 @@ if ! grep -Fq "SampleGattAttributes.HEART_RATE_MEASUREMENT.equals(uuid)" "$CONTR
   exit 1
 fi
 
+if ! grep -Fq "if (mDataField != null)" "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "GATT data field updates must guard missing data views." >&2
+  exit 1
+fi
+
+if ! grep -Fq "if (data != null && mDataField != null)" "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "GATT data display must require both data and data view." >&2
+  exit 1
+fi
+
 if ! grep -Fq "BluetoothAdapter.checkBluetoothAddress(address)" "$BLE_SERVICE"; then
   printf '%s\n' "BLE connection must validate device addresses before getRemoteDevice." >&2
   exit 1
@@ -277,6 +287,11 @@ if ! grep -Fq "BLE scan lifecycle guards nullable Bluetooth adapters" "$README";
   exit 1
 fi
 
+if ! grep -Fq "GATT data-field updates guard missing data views" "$README"; then
+  printf '%s\n' "README must document GATT data-field null guards." >&2
+  exit 1
+fi
+
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-broadcast-privacy.md"; then
   printf '%s\n' "HRM broadcast privacy plan must document make check verification." >&2
   exit 1
@@ -284,6 +299,11 @@ fi
 
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-scan-lifecycle-guards.md"; then
   printf '%s\n' "HRM scan lifecycle guard plan must document make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-data-field-guard.md"; then
+  printf '%s\n' "HRM data-field guard plan must document make check verification." >&2
   exit 1
 fi
 
