@@ -2,6 +2,8 @@
 
 ## 2026-06-08
 
+- Added `make check` as the root wrapper for HRM source, lint, Gradle check,
+  and debug build verification.
 - Added a BLE address validation contract so connection attempts reject invalid
   device addresses before calling Android's `getRemoteDevice` API.
 - Made the BLE scan timeout callback cancellable so pause and navigation stop
