@@ -1,5 +1,6 @@
 package com.garethpaul.app.hrm;
 
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.ListActivity;
 import android.bluetooth.BluetoothAdapter;
@@ -46,7 +47,7 @@ public class DeviceScanActivity extends ListActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getActionBar().setDisplayShowTitleEnabled(false);
+        configureActionBar();
         mHandler = new Handler();
 
         // Use this check to determine whether BLE is supported on the device.  Then you can
@@ -68,6 +69,15 @@ public class DeviceScanActivity extends ListActivity {
             finish();
             return;
         }
+    }
+
+    private void configureActionBar() {
+        ActionBar actionBar = getActionBar();
+        if (actionBar == null) {
+            return;
+        }
+
+        actionBar.setDisplayShowTitleEnabled(false);
     }
 
     @Override

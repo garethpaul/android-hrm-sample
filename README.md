@@ -72,6 +72,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - This legacy Android baseline pins Android build-tools 24.0.3 and Android support libraries 21.0.2.
 - Heart-rate notification descriptor writes are null-guarded and use the
   matching enable or disable descriptor value.
+- Scan and GATT control activities guard nullable ActionBar setup before
+  applying title or up-navigation presentation.
 
 ## Security and Privacy Notes
 
@@ -96,6 +98,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   heart-rate characteristic matching contract.
 - See `docs/plans/2026-06-09-hrm-notification-descriptor-guard.md` for the
   heart-rate notification descriptor contract.
+- See `docs/plans/2026-06-09-hrm-actionbar-guard.md` for the nullable ActionBar
+  startup guard.
 
 ## Contributing
 

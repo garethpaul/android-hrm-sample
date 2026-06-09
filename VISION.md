@@ -24,6 +24,8 @@ Priority:
 - Make SDK and build-tool assumptions visible
 - Keep heart-rate characteristic matching tied to standard GATT UUIDs
 - Keep heart-rate notification descriptor writes null-safe and reversible
+- Keep scan and control activity startup safe when legacy ActionBar presentation
+  is unavailable
 - Avoid changing BLE behavior without device or emulator verification notes
 
 Next priorities:

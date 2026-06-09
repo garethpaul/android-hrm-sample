@@ -51,6 +51,34 @@ if ! grep -Fq "Android build-tools 24.0.3" "$ROOT_DIR/README.md"; then
   exit 1
 fi
 
+if grep -Fq "getActionBar().set" "$SCAN_ACTIVITY" || grep -Fq "getActionBar().set" "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "HRM activities must guard nullable getActionBar() results." >&2
+  exit 1
+fi
+
+for pattern in \
+  "private void configureActionBar()" \
+  "ActionBar actionBar = getActionBar();" \
+  "if (actionBar == null)" \
+  "actionBar.setDisplayShowTitleEnabled(false);"; do
+  if ! grep -Fq "$pattern" "$SCAN_ACTIVITY"; then
+    printf '%s\n' "Missing scan ActionBar guard: $pattern" >&2
+    exit 1
+  fi
+done
+
+for pattern in \
+  "private void configureActionBar()" \
+  "ActionBar actionBar = getActionBar();" \
+  "if (actionBar == null)" \
+  "actionBar.setDisplayShowTitleEnabled(false);" \
+  "actionBar.setDisplayHomeAsUpEnabled(true);"; do
+  if ! grep -Fq "$pattern" "$CONTROL_ACTIVITY"; then
+    printf '%s\n' "Missing control ActionBar guard: $pattern" >&2
+    exit 1
+  fi
+done
+
 if grep -Fq "charaProp | BluetoothGattCharacteristic.PROPERTY_READ" "$CONTROL_ACTIVITY"; then
   printf '%s\n' "Read-property check must use bitwise AND, not OR." >&2
   exit 1
