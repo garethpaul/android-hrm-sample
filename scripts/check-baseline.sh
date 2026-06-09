@@ -70,6 +70,16 @@ if ! grep -Fq "charaProp & BluetoothGattCharacteristic.PROPERTY_NOTIFY" "$CONTRO
   exit 1
 fi
 
+if grep -Fq 'gattInfo == "Heart Rate Measurement"' "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "Heart-rate characteristic matching must not use Java string identity." >&2
+  exit 1
+fi
+
+if ! grep -Fq "SampleGattAttributes.HEART_RATE_MEASUREMENT.equals(uuid)" "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "Heart-rate characteristic matching must use the standard UUID constant." >&2
+  exit 1
+fi
+
 if ! grep -Fq "BluetoothAdapter.checkBluetoothAddress(address)" "$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java"; then
   printf '%s\n' "BLE connection must validate device addresses before getRemoteDevice." >&2
   exit 1

@@ -59,6 +59,9 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - `make check` - runs the source baseline and Android SDK-backed Gradle checks
   when `ANDROID_HOME` is configured
 - `scripts/check-baseline.sh` - runs SDK-free HRM sample baseline checks.
+- The SDK-free baseline protects GATT property checks, BLE address validation,
+  scan timeout cleanup, heart-rate characteristic matching, and resource lint
+  contracts.
 - `./gradlew lint --no-daemon`, `./gradlew check --no-daemon`, and `./gradlew assembleDebug --no-daemon` when the Android SDK is configured.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
@@ -80,11 +83,15 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - This looks like a legacy Android project or sample. Expect Android SDK, Gradle, and support-library versions to matter.
 - The current baseline keeps Gradle 2.2.1, Android Gradle Plugin 1.0.0, compile SDK 22, target SDK 22, and Android build-tools 24.0.3.
 - The SDK-free baseline protects GATT property checks, BLE address validation, BLE scan timeout cleanup, and legacy resource lint contracts.
+- Heart-rate measurement notification setup matches the standard GATT
+  characteristic UUID, not a display label string identity check.
 - `Application/lint.xml` documents the obsolete lint API database limitation and the intentional `drawable-nodpi` bitmap asset baseline.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 - See `docs/plans/2026-06-08-hrm-check-wrapper.md` for the root verification
   wrapper baseline.
+- See `docs/plans/2026-06-09-hrm-heart-rate-characteristic-match.md` for the
+  heart-rate characteristic matching contract.
 
 ## Contributing
 

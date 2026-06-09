@@ -22,6 +22,7 @@ Priority:
 - Keep the Bluetooth LE scan/connect/display flow intact
 - Preserve the sample's source layout and Android support dependencies
 - Make SDK and build-tool assumptions visible
+- Keep heart-rate characteristic matching tied to standard GATT UUIDs
 - Avoid changing BLE behavior without device or emulator verification notes
 
 Next priorities:

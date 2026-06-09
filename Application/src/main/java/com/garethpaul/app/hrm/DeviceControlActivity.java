@@ -262,9 +262,8 @@ public class DeviceControlActivity extends Activity {
                 uuid = gattCharacteristic.getUuid().toString();
 
                 String gattInfo = SampleGattAttributes.lookup(uuid, unknownCharaString);
-                if (gattInfo == "Heart Rate Measurement") {
-                    currentCharaData.put(
-                            LIST_NAME, SampleGattAttributes.lookup(uuid, unknownCharaString));
+                if (SampleGattAttributes.HEART_RATE_MEASUREMENT.equals(uuid)) {
+                    currentCharaData.put(LIST_NAME, gattInfo);
                     currentCharaData.put(LIST_UUID, uuid);
                     Log.v("loop", uuid);
                     mBluetoothLeService.setCharacteristicNotification(gattCharacteristic, true);

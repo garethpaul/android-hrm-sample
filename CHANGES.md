@@ -15,3 +15,5 @@
   `sp` for text sizes.
 - Removed unused template strings and dimensions, moved the single 9-patch tile
   asset to `drawable-nodpi`, and documented the narrow legacy lint baseline.
+- Matched the heart-rate measurement characteristic by standard UUID instead
+  of Java string identity on the display label.
