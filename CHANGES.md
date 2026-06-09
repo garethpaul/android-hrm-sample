@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Guarded BLE scan lifecycle paths against missing Bluetooth adapters, handlers,
+  stopped list adapters, and null scan callback devices.
 - Scoped GATT update broadcasts to the app package and stopped logging exact
   heart-rate measurement values in debug output.
 - Guarded BLE scan startup when the device lacks BLE support or Android cannot

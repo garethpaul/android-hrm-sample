@@ -39,7 +39,9 @@ public class DeviceScanActivity extends ListActivity {
         @Override
         public void run() {
             mScanning = false;
-            mBluetoothAdapter.stopLeScan(mLeScanCallback);
+            if (mBluetoothAdapter != null) {
+                mBluetoothAdapter.stopLeScan(mLeScanCallback);
+            }
             invalidateOptionsMenu();
         }
     };
@@ -106,7 +108,9 @@ public class DeviceScanActivity extends ListActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case com.garethpaul.app.hrm.R.id.menu_scan:
-                mLeDeviceListAdapter.clear();
+                if (mLeDeviceListAdapter != null) {
+                    mLeDeviceListAdapter.clear();
+                }
                 scanLeDevice(true);
                 break;
             case com.garethpaul.app.hrm.R.id.menu_stop:
@@ -119,6 +123,11 @@ public class DeviceScanActivity extends ListActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        if (mBluetoothAdapter == null) {
+            finish();
+            return;
+        }
 
         // Ensures Bluetooth is enabled on the device.  If Bluetooth is not currently enabled,
         // fire an intent to display a dialog asking the user to grant permission to enable it.
@@ -149,7 +158,9 @@ public class DeviceScanActivity extends ListActivity {
     protected void onPause() {
         super.onPause();
         scanLeDevice(false);
-        mLeDeviceListAdapter.clear();
+        if (mLeDeviceListAdapter != null) {
+            mLeDeviceListAdapter.clear();
+        }
     }
 
     @Override
@@ -166,6 +177,10 @@ public class DeviceScanActivity extends ListActivity {
     }
 
     private void scanLeDevice(final boolean enable) {
+        if (mBluetoothAdapter == null || mHandler == null) {
+            return;
+        }
+
         if (enable) {
             // Stops scanning after a pre-defined scan period.
             mHandler.removeCallbacks(mStopScanRunnable);
@@ -193,6 +208,10 @@ public class DeviceScanActivity extends ListActivity {
         }
 
         public void addDevice(BluetoothDevice device) {
+            if (device == null) {
+                return;
+            }
+
             if(!mLeDevices.contains(device)) {
                 mLeDevices.add(device);
             }
@@ -257,6 +276,10 @@ public class DeviceScanActivity extends ListActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    if (mLeDeviceListAdapter == null || device == null) {
+                        return;
+                    }
+
                     mLeDeviceListAdapter.addDevice(device);
                     mLeDeviceListAdapter.notifyDataSetChanged();
                 }

@@ -23,6 +23,7 @@ Priority:
 - Preserve the sample's source layout and Android support dependencies
 - Make SDK and build-tool assumptions visible
 - Keep BLE startup failure paths explicit before scanning begins
+- Keep scan lifecycle callbacks safe after startup failure or pause cleanup
 - Keep heart-rate characteristic matching tied to standard GATT UUIDs
 - Keep heart-rate notification descriptor writes null-safe and reversible
 - Keep heart-rate and GATT update delivery scoped to the app process boundary

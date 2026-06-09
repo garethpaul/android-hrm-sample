@@ -119,6 +119,19 @@ if ! grep -Fq "if (bluetoothManager == null)" "$SCAN_ACTIVITY"; then
   exit 1
 fi
 
+for pattern in \
+  "if (mBluetoothAdapter != null)" \
+  "if (mBluetoothAdapter == null || mHandler == null)" \
+  "if (mLeDeviceListAdapter != null)" \
+  "if (mLeDeviceListAdapter == null || device == null)" \
+  "public void addDevice(BluetoothDevice device)" \
+  "if (device == null) {"; do
+  if ! grep -Fq "$pattern" "$SCAN_ACTIVITY"; then
+    printf '%s\n' "Missing HRM scan lifecycle guard: $pattern" >&2
+    exit 1
+  fi
+done
+
 if ! grep -Fq "finish();" "$SCAN_ACTIVITY" || ! grep -Fq "return;" "$SCAN_ACTIVITY"; then
   printf '%s\n' "Device scan startup failure paths must finish and return." >&2
   exit 1
@@ -259,8 +272,18 @@ if ! grep -Fq "GATT broadcasts are package-scoped" "$README"; then
   exit 1
 fi
 
+if ! grep -Fq "BLE scan lifecycle guards nullable Bluetooth adapters" "$README"; then
+  printf '%s\n' "README must document BLE scan lifecycle null guards." >&2
+  exit 1
+fi
+
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-broadcast-privacy.md"; then
   printf '%s\n' "HRM broadcast privacy plan must document make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-scan-lifecycle-guards.md"; then
+  printf '%s\n' "HRM scan lifecycle guard plan must document make check verification." >&2
   exit 1
 fi
 

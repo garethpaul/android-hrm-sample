@@ -78,6 +78,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   values are not written to debug logs.
 - BLE scan startup guards unsupported devices and missing Bluetooth manager
   services before requesting a Bluetooth adapter.
+- BLE scan lifecycle guards nullable Bluetooth adapters, handlers, stopped list
+  adapters, and null scan callback devices.
 - Scan and GATT control activities guard nullable ActionBar setup before
   applying title or up-navigation presentation.
 
@@ -108,6 +110,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   startup guard.
 - See `docs/plans/2026-06-09-hrm-bluetooth-manager-guard.md` for the BLE scan
   startup service guard.
+- See `docs/plans/2026-06-09-hrm-scan-lifecycle-guards.md` for BLE scan
+  lifecycle and callback null guards.
 - See `docs/plans/2026-06-09-hrm-broadcast-privacy.md` for the package-scoped
   GATT broadcast and heart-rate logging contract.
 
