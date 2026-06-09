@@ -137,6 +137,22 @@ for pattern in \
   fi
 done
 
+for pattern in \
+  "private Intent gattUpdateIntent(final String action)" \
+  "intent.setPackage(getPackageName());" \
+  "final Intent intent = gattUpdateIntent(action);" \
+  'Log.d(TAG, "Received heart rate measurement.");'; do
+  if ! grep -Fq "$pattern" "$BLE_SERVICE"; then
+    printf '%s\n' "Missing HRM broadcast privacy contract: $pattern" >&2
+    exit 1
+  fi
+done
+
+if grep -Fq 'String.format("Received heart rate: %d"' "$BLE_SERVICE"; then
+  printf '%s\n' "Heart-rate values must not be written to debug logs." >&2
+  exit 1
+fi
+
 if grep -Fq "descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);" "$BLE_SERVICE"; then
   printf '%s\n' "Heart-rate notification disable path must not write the enable descriptor value." >&2
   exit 1
@@ -235,6 +251,16 @@ fi
 
 if ! grep -Fq "./gradlew assembleDebug --no-daemon" "$README"; then
   printf '%s\n' "README must document Gradle build verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "GATT broadcasts are package-scoped" "$README"; then
+  printf '%s\n' "README must document package-scoped GATT broadcasts." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-broadcast-privacy.md"; then
+  printf '%s\n' "HRM broadcast privacy plan must document make check verification." >&2
   exit 1
 fi
 

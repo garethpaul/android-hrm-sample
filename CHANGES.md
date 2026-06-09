@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Scoped GATT update broadcasts to the app package and stopped logging exact
+  heart-rate measurement values in debug output.
 - Guarded BLE scan startup when the device lacks BLE support or Android cannot
   provide a `BluetoothManager` service.
 - Guarded the heart-rate client-config descriptor before notification writes

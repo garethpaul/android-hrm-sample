@@ -25,6 +25,7 @@ Priority:
 - Keep BLE startup failure paths explicit before scanning begins
 - Keep heart-rate characteristic matching tied to standard GATT UUIDs
 - Keep heart-rate notification descriptor writes null-safe and reversible
+- Keep heart-rate and GATT update delivery scoped to the app process boundary
 - Keep scan and control activity startup safe when legacy ActionBar presentation
   is unavailable
 - Avoid changing BLE behavior without device or emulator verification notes

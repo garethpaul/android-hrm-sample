@@ -99,13 +99,13 @@ public class BluetoothLeService extends Service {
     };
 
     private void broadcastUpdate(final String action) {
-        final Intent intent = new Intent(action);
+        final Intent intent = gattUpdateIntent(action);
         sendBroadcast(intent);
     }
 
     private void broadcastUpdate(final String action,
                                  final BluetoothGattCharacteristic characteristic) {
-        final Intent intent = new Intent(action);
+        final Intent intent = gattUpdateIntent(action);
 
         // This is special handling for the Heart Rate Measurement profile.  Data parsing is
         // carried out as per profile specifications:
@@ -121,7 +121,7 @@ public class BluetoothLeService extends Service {
                 Log.d(TAG, "Heart rate format UINT8.");
             }
             final int heartRate = characteristic.getIntValue(format, 1);
-            Log.d(TAG, String.format("Received heart rate: %d", heartRate));
+            Log.d(TAG, "Received heart rate measurement.");
             intent.putExtra(EXTRA_DATA, String.valueOf(heartRate));
         } else {
             // For all other profiles, writes the data formatted in HEX.
@@ -134,6 +134,12 @@ public class BluetoothLeService extends Service {
             }
         }
         sendBroadcast(intent);
+    }
+
+    private Intent gattUpdateIntent(final String action) {
+        final Intent intent = new Intent(action);
+        intent.setPackage(getPackageName());
+        return intent;
     }
 
     public class LocalBinder extends Binder {

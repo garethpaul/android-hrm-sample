@@ -74,6 +74,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - This legacy Android baseline pins Android build-tools 24.0.3 and Android support libraries 21.0.2.
 - Heart-rate notification descriptor writes are null-guarded and use the
   matching enable or disable descriptor value.
+- GATT broadcasts are package-scoped before delivery, and exact heart-rate
+  values are not written to debug logs.
 - BLE scan startup guards unsupported devices and missing Bluetooth manager
   services before requesting a Bluetooth adapter.
 - Scan and GATT control activities guard nullable ActionBar setup before
@@ -106,6 +108,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   startup guard.
 - See `docs/plans/2026-06-09-hrm-bluetooth-manager-guard.md` for the BLE scan
   startup service guard.
+- See `docs/plans/2026-06-09-hrm-broadcast-privacy.md` for the package-scoped
+  GATT broadcast and heart-rate logging contract.
 
 ## Contributing
 
