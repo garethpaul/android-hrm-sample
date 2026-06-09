@@ -62,6 +62,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - The SDK-free baseline protects GATT property checks, BLE address validation,
   scan timeout cleanup, heart-rate characteristic matching, and resource lint
   contracts.
+- BLE scan startup exits before adapter use when the device lacks BLE support
+  or the Bluetooth manager service is unavailable.
 - `./gradlew lint --no-daemon`, `./gradlew check --no-daemon`, and `./gradlew assembleDebug --no-daemon` when the Android SDK is configured.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
@@ -72,6 +74,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - This legacy Android baseline pins Android build-tools 24.0.3 and Android support libraries 21.0.2.
 - Heart-rate notification descriptor writes are null-guarded and use the
   matching enable or disable descriptor value.
+- BLE scan startup guards unsupported devices and missing Bluetooth manager
+  services before requesting a Bluetooth adapter.
 - Scan and GATT control activities guard nullable ActionBar setup before
   applying title or up-navigation presentation.
 
@@ -100,6 +104,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   heart-rate notification descriptor contract.
 - See `docs/plans/2026-06-09-hrm-actionbar-guard.md` for the nullable ActionBar
   startup guard.
+- See `docs/plans/2026-06-09-hrm-bluetooth-manager-guard.md` for the BLE scan
+  startup service guard.
 
 ## Contributing
 

@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Guarded BLE scan startup when the device lacks BLE support or Android cannot
+  provide a `BluetoothManager` service.
 - Guarded the heart-rate client-config descriptor before notification writes
   and made disable requests write the BLE disable descriptor value.
 - Guarded nullable ActionBar access in the scan and GATT control activities so

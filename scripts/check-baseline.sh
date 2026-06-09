@@ -114,6 +114,16 @@ if ! grep -Fq "BluetoothAdapter.checkBluetoothAddress(address)" "$BLE_SERVICE"; 
   exit 1
 fi
 
+if ! grep -Fq "if (bluetoothManager == null)" "$SCAN_ACTIVITY"; then
+  printf '%s\n' "Device scan startup must guard missing BluetoothManager service." >&2
+  exit 1
+fi
+
+if ! grep -Fq "finish();" "$SCAN_ACTIVITY" || ! grep -Fq "return;" "$SCAN_ACTIVITY"; then
+  printf '%s\n' "Device scan startup failure paths must finish and return." >&2
+  exit 1
+fi
+
 for pattern in \
   "if (descriptor == null)" \
   "Heart rate notification descriptor is missing." \

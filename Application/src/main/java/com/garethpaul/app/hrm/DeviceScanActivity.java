@@ -55,12 +55,18 @@ public class DeviceScanActivity extends ListActivity {
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(this, com.garethpaul.app.hrm.R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
             finish();
+            return;
         }
 
         // Initializes a Bluetooth adapter.  For API level 18 and above, get a reference to
         // BluetoothAdapter through BluetoothManager.
         final BluetoothManager bluetoothManager =
                 (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        if (bluetoothManager == null) {
+            Toast.makeText(this, com.garethpaul.app.hrm.R.string.error_bluetooth_not_supported, Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
         mBluetoothAdapter = bluetoothManager.getAdapter();
 
         // Checks if Bluetooth is supported on the device.
