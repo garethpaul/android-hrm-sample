@@ -84,6 +84,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   applying title or up-navigation presentation.
 - GATT data-field updates guard missing data views so stale control layouts do
   not crash disconnect or data-available paths.
+- GATT characteristic operations guard missing characteristics before read,
+  notification, or data-broadcast parsing work.
 
 ## Security and Privacy Notes
 
@@ -118,6 +120,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   GATT broadcast and heart-rate logging contract.
 - See `docs/plans/2026-06-09-hrm-data-field-guard.md` for GATT data-field
   null guards.
+- See `docs/plans/2026-06-09-hrm-characteristic-null-guards.md` for GATT
+  characteristic null guards.
 
 ## Contributing
 

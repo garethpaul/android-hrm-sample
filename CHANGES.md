@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Guarded GATT characteristic read, notification, and data-broadcast paths when
+  callers or callbacks provide missing characteristics.
 - Guarded GATT data-field updates when stale control layouts omit the data
   value view.
 - Added SDK-free baseline coverage for GATT data-field null guards.

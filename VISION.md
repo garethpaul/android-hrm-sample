@@ -27,6 +27,7 @@ Priority:
 - Keep heart-rate characteristic matching tied to standard GATT UUIDs
 - Keep heart-rate notification descriptor writes null-safe and reversible
 - Keep heart-rate and GATT update delivery scoped to the app process boundary
+- Keep GATT characteristic operations safe when callbacks or callers omit data
 - Keep scan and control activity startup safe when legacy ActionBar presentation
   is unavailable
 - Keep GATT data-field updates safe when stale control layouts omit views

@@ -181,6 +181,22 @@ if grep -Fq "descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VAL
   exit 1
 fi
 
+characteristic_guard_count=$(grep -Fc "characteristic == null" "$BLE_SERVICE")
+if [ "$characteristic_guard_count" -lt 3 ]; then
+  printf '%s\n' "GATT characteristic read, notify, and broadcast paths must guard null characteristics." >&2
+  exit 1
+fi
+
+if ! grep -Fq "GATT characteristic is unavailable." "$BLE_SERVICE"; then
+  printf '%s\n' "GATT data broadcast path must log a generic missing-characteristic warning." >&2
+  exit 1
+fi
+
+if ! grep -Fq "BluetoothAdapter not initialized or characteristic unavailable." "$BLE_SERVICE"; then
+  printf '%s\n' "GATT operations must log a generic missing-characteristic warning." >&2
+  exit 1
+fi
+
 if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   printf '%s\n' "CHANGES.md is missing." >&2
   exit 1
@@ -292,6 +308,11 @@ if ! grep -Fq "GATT data-field updates guard missing data views" "$README"; then
   exit 1
 fi
 
+if ! grep -Fq "GATT characteristic operations guard missing characteristics" "$README"; then
+  printf '%s\n' "README must document GATT characteristic null guards." >&2
+  exit 1
+fi
+
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-broadcast-privacy.md"; then
   printf '%s\n' "HRM broadcast privacy plan must document make check verification." >&2
   exit 1
@@ -304,6 +325,11 @@ fi
 
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-data-field-guard.md"; then
   printf '%s\n' "HRM data-field guard plan must document make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-characteristic-null-guards.md"; then
+  printf '%s\n' "HRM characteristic null guard plan must document make check verification." >&2
   exit 1
 fi
 

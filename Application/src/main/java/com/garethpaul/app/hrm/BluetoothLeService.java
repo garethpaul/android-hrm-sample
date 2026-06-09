@@ -106,6 +106,11 @@ public class BluetoothLeService extends Service {
     private void broadcastUpdate(final String action,
                                  final BluetoothGattCharacteristic characteristic) {
         final Intent intent = gattUpdateIntent(action);
+        if (characteristic == null) {
+            Log.w(TAG, "GATT characteristic is unavailable.");
+            sendBroadcast(intent);
+            return;
+        }
 
         // This is special handling for the Heart Rate Measurement profile.  Data parsing is
         // carried out as per profile specifications:
@@ -265,8 +270,8 @@ public class BluetoothLeService extends Service {
      * @param characteristic The characteristic to read from.
      */
     public void readCharacteristic(BluetoothGattCharacteristic characteristic) {
-        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-            Log.w(TAG, "BluetoothAdapter not initialized");
+        if (mBluetoothAdapter == null || mBluetoothGatt == null || characteristic == null) {
+            Log.w(TAG, "BluetoothAdapter not initialized or characteristic unavailable.");
             return;
         }
         mBluetoothGatt.readCharacteristic(characteristic);
@@ -280,8 +285,8 @@ public class BluetoothLeService extends Service {
      */
     public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic,
                                               boolean enabled) {
-        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-            Log.w(TAG, "BluetoothAdapter not initialized");
+        if (mBluetoothAdapter == null || mBluetoothGatt == null || characteristic == null) {
+            Log.w(TAG, "BluetoothAdapter not initialized or characteristic unavailable.");
             return;
         }
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
