@@ -2,6 +2,10 @@
 
 ## 2026-06-10
 
+- Corrected heart-rate format selection to read the measurement flag byte and
+  guarded truncated flag/value fields before broadcasting data.
+- Made root checks location-independent, accepted `ANDROID_SDK_ROOT`, and
+  pinned CI to Ubuntu 24.04 with superseded-run cancellation.
 - Added pinned, read-only GitHub Actions CI that runs the root `make check`
   baseline with a bounded timeout and explicit SDK-free execution.
 - Removed the maintainer-specific Android SDK path from the Makefile.

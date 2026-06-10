@@ -58,7 +58,7 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 ## Testing and Verification
 
 - `make check` - runs the source baseline and Android SDK-backed Gradle checks
-  when `ANDROID_HOME` is configured
+  when `ANDROID_HOME` or `ANDROID_SDK_ROOT` is configured
 - `scripts/check-baseline.sh` - runs SDK-free HRM sample baseline checks.
 - The SDK-free baseline protects GATT property checks, BLE address validation,
   scan timeout cleanup, heart-rate characteristic matching, and resource lint
@@ -67,9 +67,10 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   or the Bluetooth manager service is unavailable.
 - `./gradlew lint --no-daemon`, `./gradlew check --no-daemon`, and `./gradlew assembleDebug --no-daemon` when the Android SDK is configured.
 - GitHub Actions runs the root `make check` gate through
-  `.github/workflows/check.yml` on pushes and pull requests.
-- Local Gradle checks require an explicit `ANDROID_HOME`; CI clears ambient SDK
-  variables to preserve the documented static-only boundary.
+  `.github/workflows/check.yml` on pushes and pull requests using Ubuntu 24.04
+  with superseded-run cancellation.
+- Local Gradle checks accept `ANDROID_HOME` or `ANDROID_SDK_ROOT`; CI clears
+  both variables to preserve the documented static-only boundary.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -91,6 +92,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   not crash disconnect or data-available paths.
 - GATT characteristic operations guard missing characteristics before read,
   notification, or data-broadcast parsing work.
+- Heart-rate parsing reads the format flag from measurement byte zero and
+  rejects truncated flag or value fields without unboxing null values.
 
 ## Security and Privacy Notes
 

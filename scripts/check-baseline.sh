@@ -176,6 +176,30 @@ if grep -Fq 'String.format("Received heart rate: %d"' "$BLE_SERVICE"; then
   exit 1
 fi
 
+for heart_rate_contract in \
+  "Integer flag = characteristic.getIntValue(" \
+  "BluetoothGattCharacteristic.FORMAT_UINT8," \
+  "if (flag == null)" \
+  "Heart rate measurement flags are unavailable." \
+  "final Integer heartRate = characteristic.getIntValue(format, 1);" \
+  "if (heartRate == null)" \
+  "Heart rate measurement value is unavailable."; do
+  if ! grep -Fq "$heart_rate_contract" "$BLE_SERVICE"; then
+    printf '%s\n' "Missing heart-rate packet guard: $heart_rate_contract" >&2
+    exit 1
+  fi
+done
+
+if grep -Fq "int flag = characteristic.getProperties();" "$BLE_SERVICE"; then
+  printf '%s\n' "Heart-rate format flags must come from measurement data, not properties." >&2
+  exit 1
+fi
+
+if grep -Fq "final int heartRate = characteristic.getIntValue" "$BLE_SERVICE"; then
+  printf '%s\n' "Heart-rate parsing must not unbox a nullable characteristic value." >&2
+  exit 1
+fi
+
 if grep -Fq "descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);" "$BLE_SERVICE"; then
   printf '%s\n' "Heart-rate notification disable path must not write the enable descriptor value." >&2
   exit 1
@@ -210,6 +234,8 @@ fi
 for workflow_contract in \
   "permissions:" \
   "contents: read" \
+  "runs-on: ubuntu-24.04" \
+  "cancel-in-progress: true" \
   "timeout-minutes: 5" \
   "workflow_dispatch:" \
   "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" \
@@ -218,6 +244,15 @@ for workflow_contract in \
   "make check"; do
   if ! grep -Fq "$workflow_contract" "$ROOT_DIR/.github/workflows/check.yml"; then
     printf '%s\n' "GitHub Actions workflow must keep contract: $workflow_contract" >&2
+    exit 1
+  fi
+done
+
+for make_contract in \
+  'ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' \
+  'ANDROID_SDK := $(if $(ANDROID_HOME),$(ANDROID_HOME),$(ANDROID_SDK_ROOT))'; do
+  if ! grep -Fq "$make_contract" "$ROOT_DIR/Makefile"; then
+    printf '%s\n' "Makefile must keep contract: $make_contract" >&2
     exit 1
   fi
 done

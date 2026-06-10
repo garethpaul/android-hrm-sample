@@ -25,6 +25,8 @@ Priority:
 - Keep BLE startup failure paths explicit before scanning begins
 - Keep scan lifecycle callbacks safe after startup failure or pause cleanup
 - Keep heart-rate characteristic matching tied to standard GATT UUIDs
+- Parse heart-rate format flags from measurement data and reject truncated
+  packets safely
 - Keep heart-rate notification descriptor writes null-safe and reversible
 - Keep heart-rate and GATT update delivery scoped to the app process boundary
 - Keep GATT characteristic operations safe when callbacks or callers omit data

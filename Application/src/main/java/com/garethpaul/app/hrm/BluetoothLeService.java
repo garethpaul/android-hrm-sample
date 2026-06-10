@@ -116,7 +116,15 @@ public class BluetoothLeService extends Service {
         // carried out as per profile specifications:
         // http://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.heart_rate_measurement.xml
         if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
-            int flag = characteristic.getProperties();
+            Integer flag = characteristic.getIntValue(
+                    BluetoothGattCharacteristic.FORMAT_UINT8,
+                    0);
+            if (flag == null) {
+                Log.w(TAG, "Heart rate measurement flags are unavailable.");
+                sendBroadcast(intent);
+                return;
+            }
+
             int format = -1;
             if ((flag & 0x01) != 0) {
                 format = BluetoothGattCharacteristic.FORMAT_UINT16;
@@ -125,7 +133,12 @@ public class BluetoothLeService extends Service {
                 format = BluetoothGattCharacteristic.FORMAT_UINT8;
                 Log.d(TAG, "Heart rate format UINT8.");
             }
-            final int heartRate = characteristic.getIntValue(format, 1);
+            final Integer heartRate = characteristic.getIntValue(format, 1);
+            if (heartRate == null) {
+                Log.w(TAG, "Heart rate measurement value is unavailable.");
+                sendBroadcast(intent);
+                return;
+            }
             Log.d(TAG, "Received heart rate measurement.");
             intent.putExtra(EXTRA_DATA, String.valueOf(heartRate));
         } else {
