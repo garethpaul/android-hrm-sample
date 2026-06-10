@@ -31,6 +31,7 @@ Priority:
 - Keep scan and control activity startup safe when legacy ActionBar presentation
   is unavailable
 - Keep GATT data-field updates safe when stale control layouts omit views
+- Keep GitHub Actions running the root `make check` baseline
 - Avoid changing BLE behavior without device or emulator verification notes
 
 Next priorities:

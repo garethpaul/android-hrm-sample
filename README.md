@@ -12,6 +12,7 @@ This README is based on the checked-in source, manifests, scripts, and repositor
 ## Repository Contents
 
 - `README.md` - project overview and local usage notes
+- `.github/workflows/check.yml` - CI baseline that runs the root Make gate
 - `build.gradle` - Android or Gradle build configuration
 - `.google` - source or example code
 - `Application` - source or example code
@@ -65,6 +66,10 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - BLE scan startup exits before adapter use when the device lacks BLE support
   or the Bluetooth manager service is unavailable.
 - `./gradlew lint --no-daemon`, `./gradlew check --no-daemon`, and `./gradlew assembleDebug --no-daemon` when the Android SDK is configured.
+- GitHub Actions runs the root `make check` gate through
+  `.github/workflows/check.yml` on pushes and pull requests.
+- Local Gradle checks require an explicit `ANDROID_HOME`; CI clears ambient SDK
+  variables to preserve the documented static-only boundary.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -122,6 +127,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
   null guards.
 - See `docs/plans/2026-06-09-hrm-characteristic-null-guards.md` for GATT
   characteristic null guards.
+- See `docs/plans/2026-06-10-ci-baseline.md` for the lightweight CI baseline.
 
 ## Contributing
 

@@ -202,6 +202,31 @@ if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   exit 1
 fi
 
+if [ ! -f "$ROOT_DIR/.github/workflows/check.yml" ]; then
+  printf '%s\n' "GitHub Actions check workflow is missing." >&2
+  exit 1
+fi
+
+for workflow_contract in \
+  "permissions:" \
+  "contents: read" \
+  "timeout-minutes: 5" \
+  "workflow_dispatch:" \
+  "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" \
+  'ANDROID_HOME: ""' \
+  'ANDROID_SDK_ROOT: ""' \
+  "make check"; do
+  if ! grep -Fq "$workflow_contract" "$ROOT_DIR/.github/workflows/check.yml"; then
+    printf '%s\n' "GitHub Actions workflow must keep contract: $workflow_contract" >&2
+    exit 1
+  fi
+done
+
+if grep -Fq "/home/gjones" "$ROOT_DIR/Makefile"; then
+  printf '%s\n' "Makefile must not embed a maintainer-specific Android SDK path." >&2
+  exit 1
+fi
+
 if grep -Fq "inflate(com.garethpaul.app.hrm.R.layout.listitem_device, null)" "$SCAN_ACTIVITY"; then
   printf '%s\n' "Device row inflation must use the parent ViewGroup." >&2
   exit 1
@@ -313,6 +338,26 @@ if ! grep -Fq "GATT characteristic operations guard missing characteristics" "$R
   exit 1
 fi
 
+if ! grep -Fq "GitHub Actions" "$README"; then
+  printf '%s\n' "README must document the GitHub Actions baseline." >&2
+  exit 1
+fi
+
+if ! grep -Fq "GitHub Actions" "$ROOT_DIR/VISION.md"; then
+  printf '%s\n' "VISION must document the GitHub Actions baseline." >&2
+  exit 1
+fi
+
+if ! grep -Fq "GitHub Actions" "$ROOT_DIR/SECURITY.md"; then
+  printf '%s\n' "SECURITY must document the GitHub Actions baseline." >&2
+  exit 1
+fi
+
+if ! grep -Fq "GitHub Actions" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "CHANGES must record the GitHub Actions baseline." >&2
+  exit 1
+fi
+
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-broadcast-privacy.md"; then
   printf '%s\n' "HRM broadcast privacy plan must document make check verification." >&2
   exit 1
@@ -330,6 +375,16 @@ fi
 
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-characteristic-null-guards.md"; then
   printf '%s\n' "HRM characteristic null guard plan must document make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"; then
+  printf '%s\n' "HRM CI baseline plan must be completed." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"; then
+  printf '%s\n' "HRM CI baseline plan must document make check verification." >&2
   exit 1
 fi
 

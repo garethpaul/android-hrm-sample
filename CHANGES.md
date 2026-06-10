@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-10
+
+- Added pinned, read-only GitHub Actions CI that runs the root `make check`
+  baseline with a bounded timeout and explicit SDK-free execution.
+- Removed the maintainer-specific Android SDK path from the Makefile.
+
 ## 2026-06-09
 
 - Guarded GATT characteristic read, notification, and data-broadcast paths when
