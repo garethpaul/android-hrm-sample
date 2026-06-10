@@ -2,6 +2,8 @@
 
 ## 2026-06-10
 
+- Guarded GATT connection callbacks against stale instances and failed status
+  transitions, and rejected null connection objects.
 - Corrected heart-rate format selection to read the measurement flag byte and
   guarded truncated flag/value fields before broadcasting data.
 - Made root checks location-independent, accepted `ANDROID_SDK_ROOT`, and

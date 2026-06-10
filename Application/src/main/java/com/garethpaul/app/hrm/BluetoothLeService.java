@@ -55,6 +55,20 @@ public class BluetoothLeService extends Service {
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            if (gatt == null || gatt != mBluetoothGatt) {
+                Log.w(TAG, "Ignoring stale GATT connection callback.");
+                return;
+            }
+
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.w(TAG, "GATT connection failed with status: " + status);
+                mConnectionState = STATE_DISCONNECTED;
+                broadcastUpdate(ACTION_GATT_DISCONNECTED);
+                gatt.close();
+                mBluetoothGatt = null;
+                return;
+            }
+
             String intentAction;
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 intentAction = ACTION_GATT_CONNECTED;
@@ -63,7 +77,7 @@ public class BluetoothLeService extends Service {
                 Log.i(TAG, "Connected to GATT server.");
                 // Attempts to discover services after successful connection.
                 Log.i(TAG, "Attempting to start service discovery:" +
-                        mBluetoothGatt.discoverServices());
+                        gatt.discoverServices());
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 intentAction = ACTION_GATT_DISCONNECTED;
@@ -242,7 +256,12 @@ public class BluetoothLeService extends Service {
         }
         // We want to directly connect to the device, so we are setting the autoConnect
         // parameter to false.
-        mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
+        BluetoothGatt bluetoothGatt = device.connectGatt(this, false, mGattCallback);
+        if (bluetoothGatt == null) {
+            Log.w(TAG, "Unable to create a GATT connection.");
+            return false;
+        }
+        mBluetoothGatt = bluetoothGatt;
         Log.d(TAG, "Trying to create a new connection.");
         mBluetoothDeviceAddress = address;
         mConnectionState = STATE_CONNECTING;

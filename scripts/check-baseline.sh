@@ -124,6 +124,25 @@ if ! grep -Fq "BluetoothAdapter.checkBluetoothAddress(address)" "$BLE_SERVICE"; 
   exit 1
 fi
 
+for gatt_connection_contract in \
+  "if (gatt == null || gatt != mBluetoothGatt)" \
+  "if (status != BluetoothGatt.GATT_SUCCESS)" \
+  "gatt.close();" \
+  "mBluetoothGatt = null;" \
+  "gatt.discoverServices()" \
+  "BluetoothGatt bluetoothGatt = device.connectGatt(this, false, mGattCallback);" \
+  "if (bluetoothGatt == null)"; do
+  if ! grep -Fq "$gatt_connection_contract" "$BLE_SERVICE"; then
+    printf '%s\n' "GATT connection ownership must keep contract: $gatt_connection_contract" >&2
+    exit 1
+  fi
+done
+
+if grep -Fq "mBluetoothGatt.discoverServices()" "$BLE_SERVICE"; then
+  printf '%s\n' "GATT callbacks must discover services through their current callback instance." >&2
+  exit 1
+fi
+
 if ! grep -Fq "if (bluetoothManager == null)" "$SCAN_ACTIVITY"; then
   printf '%s\n' "Device scan startup must guard missing BluetoothManager service." >&2
   exit 1
@@ -373,6 +392,11 @@ if ! grep -Fq "GATT characteristic operations guard missing characteristics" "$R
   exit 1
 fi
 
+if ! grep -Fq "GATT connection callbacks ignore stale instances" "$README"; then
+  printf '%s\n' "README must document GATT callback ownership guards." >&2
+  exit 1
+fi
+
 if ! grep -Fq "GitHub Actions" "$README"; then
   printf '%s\n' "README must document the GitHub Actions baseline." >&2
   exit 1
@@ -410,6 +434,12 @@ fi
 
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-characteristic-null-guards.md"; then
   printf '%s\n' "HRM characteristic null guard plan must document make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-10-hrm-gatt-callback-ownership.md" || \
+   ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-10-hrm-gatt-callback-ownership.md"; then
+  printf '%s\n' "HRM GATT callback ownership plan must record completed status and make check verification." >&2
   exit 1
 fi
 

@@ -92,6 +92,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   not crash disconnect or data-available paths.
 - GATT characteristic operations guard missing characteristics before read,
   notification, or data-broadcast parsing work.
+- GATT connection callbacks ignore stale instances, reject failed status
+  transitions, and start discovery through the active callback object.
 - Heart-rate parsing reads the format flag from measurement byte zero and
   rejects truncated flag or value fields without unboxing null values.
 
