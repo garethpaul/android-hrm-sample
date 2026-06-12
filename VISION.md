@@ -35,13 +35,15 @@ Priority:
   is unavailable
 - Keep GATT data-field updates safe when stale control layouts omit views
 - Keep GitHub Actions running the root `make check` baseline
+- Keep the legacy Gradle runtime behind a checksum-verified generated wrapper
 - Avoid changing BLE behavior without device or emulator verification notes
 
 Next priorities:
 
 - Add explicit heart-rate-service parsing if this repo is used beyond the base
   GATT sample
-- Modernize Gradle, SDK levels, Android support libraries, and permissions
+- Evaluate Gradle runtime, SDK, support-library, and permission modernization
+  together in a dedicated compatibility pass; wrapper hardening is separate
 - Add tests around characteristic parsing and activity/service interaction
 - Document manual BLE device verification steps
 

@@ -1,5 +1,12 @@
 # Changes
 
+## 2026-06-12
+
+- Regenerated the Gradle wrapper bootstrap with official Gradle 8.14.5 tooling
+  while retaining the Gradle 2.2.1 Android runtime.
+- Pinned Gradle's official distribution checksum and added exact SDK-free
+  contracts for the generated wrapper artifacts and documentation boundary.
+
 ## 2026-06-10
 
 - Guarded GATT connection callbacks against stale instances and failed status

@@ -41,9 +41,15 @@ Additional scan context:
 
 - Git
 - Android Studio or a compatible Android SDK
-- Gradle or the checked-in Gradle wrapper when present
+- Java 8 and the checked-in Gradle wrapper
 
 ### Setup
+
+The generated wrapper still executes Gradle 2.2.1 for compatibility. It uses
+`distributionSha256Sum` to authenticate the downloaded distribution, while the
+SDK-free baseline verifies the checked-in wrapper JAR and launchers. This does
+not make an uncached build offline-reproducible; the first build still needs
+Gradle's HTTPS distribution service.
 
 ```bash
 git clone https://github.com/garethpaul/android-hrm-sample.git
