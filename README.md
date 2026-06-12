@@ -71,13 +71,15 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - BLE scan startup exits before adapter use when the device lacks BLE support
   or the Bluetooth manager service is unavailable.
 - `./gradlew lint --no-daemon`, `./gradlew check --no-daemon`, and `./gradlew assembleDebug --no-daemon` when the Android SDK is configured.
-- GitHub Actions runs the root `make check` gate through
-  `.github/workflows/check.yml` on pushes and pull requests using Ubuntu 24.04
-  with superseded-run cancellation.
-- Local Gradle checks accept `ANDROID_HOME` or `ANDROID_SDK_ROOT`; CI clears
-  both variables to preserve the documented static-only boundary.
+- The canonical GitHub Actions workflow installs Android API 22 and build-tools
+  24.0.3, selects Java 8, and runs full `make check` on pushes and pull
+  requests using Ubuntu 24.04 with superseded-run cancellation.
+- Local Gradle checks accept `ANDROID_HOME` or `ANDROID_SDK_ROOT` and match the
+  hosted toolchain contract.
 
-When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
+The legacy plugin uses its non-queued PNG cruncher because the concurrent
+cruncher can fail nondeterministically on clean hosted builds. BLE behavior
+still requires a compatible device or emulator.
 
 ## Configuration and Secrets
 
@@ -140,6 +142,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-09-hrm-characteristic-null-guards.md` for GATT
   characteristic null guards.
 - See `docs/plans/2026-06-10-ci-baseline.md` for the lightweight CI baseline.
+- See `docs/plans/2026-06-12-hosted-android-verification.md` for the complete
+  hosted Android lint, check, and build gate.
 - See `docs/plans/2026-06-12-hrm-data-callback-ownership.md` for complete GATT
   data callback ownership guards.
 

@@ -11,6 +11,8 @@ RES_DIR="$ROOT_DIR/Application/src/main/res"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 CODEOWNERS="$ROOT_DIR/.github/CODEOWNERS"
 DATA_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hrm-data-callback-ownership.md"
+CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
+HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
 
 expected_ci_workflow() {
   cat <<'EOF'
@@ -26,6 +28,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: check-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -33,18 +38,24 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
-      - name: Run HRM baseline
+      - name: Install Android SDK packages
+        run: '"${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-22" "build-tools;24.0.3"'
+
+      - name: Set up Java 8
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: corretto
+          java-version: "8"
+
+      - name: Run full verification
         run: make check
-        env:
-          ANDROID_HOME: ""
-          ANDROID_SDK_ROOT: ""
 EOF
 }
 
@@ -76,6 +87,10 @@ require_contains "compileSdkVersion 22" \
   "Compile SDK must stay pinned to 22."
 require_contains "buildToolsVersion \"24.0.3\"" \
   "Android build-tools must stay pinned to 24.0.3."
+require_contains "aaptOptions {" \
+  "HRM module must configure deterministic legacy PNG processing."
+require_contains "useNewCruncher false" \
+  "HRM module must avoid the nondeterministic queued PNG cruncher."
 require_contains "targetSdkVersion 22" \
   "Target SDK must stay pinned to 22."
 require_contains "com.android.support:support-v4:21.0.2" \
@@ -338,7 +353,30 @@ if [ "$workflow_paths" != "$CI_WORKFLOW" ]; then
 fi
 
 if [ "$(cat "$CI_WORKFLOW")" != "$(expected_ci_workflow)" ]; then
-  printf '%s\n' "GitHub Actions check workflow must match the approved SDK-free security baseline." >&2
+  printf '%s\n' "GitHub Actions check workflow must match the approved full Android security baseline." >&2
+  exit 1
+fi
+
+if [ ! -f "$CI_PLAN" ] || \
+   ! grep -Fq "Status: Completed" "$CI_PLAN" || \
+   ! grep -Fq "build-tools 24.0.3" "$CI_PLAN" || \
+   ! grep -Fq 'complete `make check` gate' "$CI_PLAN"; then
+  printf '%s\n' "HRM CI baseline plan must document the complete hosted Android gate." >&2
+  exit 1
+fi
+
+if [ ! -f "$HOSTED_ANDROID_PLAN" ] || \
+   ! grep -Fq "Status: Implementation Complete; Hosted Verification Pending" "$HOSTED_ANDROID_PLAN" || \
+   ! grep -Fq "make check" "$HOSTED_ANDROID_PLAN" || \
+   ! grep -Fq "zero lint issues" "$HOSTED_ANDROID_PLAN" || \
+   ! grep -Fq "Exact-head pull-request workflow pending" "$HOSTED_ANDROID_PLAN"; then
+  printf '%s\n' "Hosted HRM verification plan must record completed local evidence and pending hosted evidence." >&2
+  exit 1
+fi
+
+if ! grep -Fq "canonical GitHub Actions workflow installs Android API 22" "$README" || \
+   ! grep -Fq "2026-06-12-hosted-android-verification.md" "$README"; then
+  printf '%s\n' "README must document the hosted Android gate and plan." >&2
   exit 1
 fi
 

@@ -12,11 +12,12 @@ Android SDK is configured.
 ## Completed Scope
 
 - Added a GitHub Actions workflow for pushes, pull requests, and manual runs.
-- Pinned checkout to an immutable revision, limited permissions to repository
-  reads, and bounded the job to five minutes.
-- Configured CI to run the root `make check` contract.
-- Removed the maintainer-specific default SDK path and cleared ambient hosted
-  SDK variables so CI cannot accidentally invoke the unsupported Gradle path.
+- Pinned setup actions to immutable revisions, limited permissions to
+  repository reads, and bounded the job to 15 minutes.
+- Install Android API 22 and build-tools 24.0.3, select Java 8, and run the
+  complete `make check` gate including lint, Gradle check, and debug assembly.
+- Use the legacy non-queued PNG cruncher for deterministic clean-runner
+  resource processing while preserving aapt validation.
 - Extended the SDK-free baseline and docs so the CI gate remains visible.
 - Disabled persisted checkout credentials and replaced partial string matching
   with a canonical single-workflow contract.
@@ -24,8 +25,8 @@ Android SDK is configured.
   baseline checker; repository rules remain responsible for requiring owner
   approval.
 
-Android SDK-backed CI should follow migration of the historical Gradle,
-Android plugin, repository, and API-level baseline.
+Historical Gradle, Android plugin, support library, and API-level modernization
+remains a separate compatibility-focused change.
 
 ## Verification
 

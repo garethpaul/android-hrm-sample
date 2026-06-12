@@ -1,6 +1,6 @@
 # Hosted Android Verification
 
-## Status: Planned
+## Status: Implementation Complete; Hosted Verification Pending
 
 ## Context
 
@@ -27,11 +27,12 @@ processing while preserving BLE behavior and trust boundaries.
 
 ## Verification
 
-- Run SDK-backed `make check` from the repository and a fresh external clone.
-- Confirm Android lint reports zero issues.
-- Run hostile workflow, cruncher, documentation, and plan mutations.
-- Run `git diff --check`.
-- Require the exact-head pull-request workflow to pass.
+- Passed SDK-backed `make check` from the repository with zero lint issues.
+- Passed the complete gate from a fresh external clone.
+- Confirmed nine hostile workflow, cruncher, checker, documentation, and
+  plan-status mutations are rejected.
+- Passed `git diff --check`.
+- Exact-head pull-request workflow pending after the implementation push.
 
 ## Boundaries
 
