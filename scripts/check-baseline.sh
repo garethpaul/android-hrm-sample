@@ -366,11 +366,12 @@ if [ ! -f "$CI_PLAN" ] || \
 fi
 
 if [ ! -f "$HOSTED_ANDROID_PLAN" ] || \
-   ! grep -Fq "Status: Implementation Complete; Hosted Verification Pending" "$HOSTED_ANDROID_PLAN" || \
+   ! grep -Fq "Status: Completed" "$HOSTED_ANDROID_PLAN" || \
    ! grep -Fq "make check" "$HOSTED_ANDROID_PLAN" || \
    ! grep -Fq "zero lint issues" "$HOSTED_ANDROID_PLAN" || \
-   ! grep -Fq "Exact-head pull-request workflow pending" "$HOSTED_ANDROID_PLAN"; then
-  printf '%s\n' "Hosted HRM verification plan must record completed local evidence and pending hosted evidence." >&2
+   ! grep -Fq 'pull-request run `27401864615`' "$HOSTED_ANDROID_PLAN" || \
+   ! grep -Fq '`dbfd8b1a8c2bfd52444c3210f508823c2445453b`' "$HOSTED_ANDROID_PLAN"; then
+  printf '%s\n' "Hosted HRM verification plan must record completed local and exact-head hosted evidence." >&2
   exit 1
 fi
 
