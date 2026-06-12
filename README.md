@@ -94,6 +94,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   notification, or data-broadcast parsing work.
 - GATT connection callbacks ignore stale instances, reject failed status
   transitions, and start discovery through the active callback object.
+- GATT service, read, and notification callbacks reject stale GATT instances
+  before publishing discovered services or sensor data.
 - Heart-rate parsing reads the format flag from measurement byte zero and
   rejects truncated flag or value fields without unboxing null values.
 
@@ -133,6 +135,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-09-hrm-characteristic-null-guards.md` for GATT
   characteristic null guards.
 - See `docs/plans/2026-06-10-ci-baseline.md` for the lightweight CI baseline.
+- See `docs/plans/2026-06-12-hrm-data-callback-ownership.md` for complete GATT
+  data callback ownership guards.
 
 ## Contributing
 

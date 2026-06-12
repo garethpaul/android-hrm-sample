@@ -8,6 +8,7 @@ SCAN_ACTIVITY="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/Device
 BLE_SERVICE="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java"
 README="$ROOT_DIR/README.md"
 RES_DIR="$ROOT_DIR/Application/src/main/res"
+DATA_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hrm-data-callback-ownership.md"
 
 require_contains() {
   pattern=$1
@@ -140,6 +141,48 @@ done
 
 if grep -Fq "mBluetoothGatt.discoverServices()" "$BLE_SERVICE"; then
   printf '%s\n' "GATT callbacks must discover services through their current callback instance." >&2
+  exit 1
+fi
+
+SERVICES_CALLBACK=$(sed -n \
+  '/public void onServicesDiscovered/,/public void onCharacteristicRead/p' \
+  "$BLE_SERVICE")
+READ_CALLBACK=$(sed -n \
+  '/public void onCharacteristicRead/,/public void onCharacteristicChanged/p' \
+  "$BLE_SERVICE")
+NOTIFICATION_CALLBACK=$(sed -n \
+  '/public void onCharacteristicChanged/,/    };/p' \
+  "$BLE_SERVICE")
+
+check_callback_ownership() {
+  callback_body=$1
+  callback_log=$2
+  callback_name=$3
+
+  if ! printf '%s\n' "$callback_body" | grep -Fq "if (gatt == null || gatt != mBluetoothGatt)" || \
+     ! printf '%s\n' "$callback_body" | grep -Fq "$callback_log"; then
+    printf '%s\n' "GATT data callback ownership is incomplete for $callback_name." >&2
+    exit 1
+  fi
+}
+
+check_callback_ownership \
+  "$SERVICES_CALLBACK" \
+  "Ignoring stale GATT services callback." \
+  "services"
+check_callback_ownership \
+  "$READ_CALLBACK" \
+  "Ignoring stale GATT read callback." \
+  "read"
+check_callback_ownership \
+  "$NOTIFICATION_CALLBACK" \
+  "Ignoring stale GATT notification callback." \
+  "notification"
+
+if [ ! -f "$DATA_CALLBACK_PLAN" ] || \
+   ! grep -Fq "Status: Completed" "$DATA_CALLBACK_PLAN" || \
+   ! grep -Fq "make check" "$DATA_CALLBACK_PLAN"; then
+  printf '%s\n' "HRM data callback ownership plan must record completed make check verification." >&2
   exit 1
 fi
 
@@ -394,6 +437,11 @@ fi
 
 if ! grep -Fq "GATT connection callbacks ignore stale instances" "$README"; then
   printf '%s\n' "README must document GATT callback ownership guards." >&2
+  exit 1
+fi
+
+if ! grep -Fq "service, read, and notification callbacks reject stale GATT instances" "$README"; then
+  printf '%s\n' "README must document complete GATT data callback ownership guards." >&2
   exit 1
 fi
 
