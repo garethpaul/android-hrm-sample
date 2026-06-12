@@ -89,6 +89,11 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            if (gatt == null || gatt != mBluetoothGatt) {
+                Log.w(TAG, "Ignoring stale GATT services callback.");
+                return;
+            }
+
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
             } else {
@@ -100,6 +105,11 @@ public class BluetoothLeService extends Service {
         public void onCharacteristicRead(BluetoothGatt gatt,
                                          BluetoothGattCharacteristic characteristic,
                                          int status) {
+            if (gatt == null || gatt != mBluetoothGatt) {
+                Log.w(TAG, "Ignoring stale GATT read callback.");
+                return;
+            }
+
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
             }
@@ -108,6 +118,11 @@ public class BluetoothLeService extends Service {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
+            if (gatt == null || gatt != mBluetoothGatt) {
+                Log.w(TAG, "Ignoring stale GATT notification callback.");
+                return;
+            }
+
             broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
         }
     };
