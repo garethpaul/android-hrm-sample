@@ -8,6 +8,44 @@ SCAN_ACTIVITY="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/Device
 BLE_SERVICE="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java"
 README="$ROOT_DIR/README.md"
 RES_DIR="$ROOT_DIR/Application/src/main/res"
+CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
+CODEOWNERS="$ROOT_DIR/.github/CODEOWNERS"
+
+expected_ci_workflow() {
+  cat <<'EOF'
+name: Check
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Run HRM baseline
+        run: make check
+        env:
+          ANDROID_HOME: ""
+          ANDROID_SDK_ROOT: ""
+EOF
+}
 
 require_contains() {
   pattern=$1
@@ -245,27 +283,31 @@ if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   exit 1
 fi
 
-if [ ! -f "$ROOT_DIR/.github/workflows/check.yml" ]; then
+if [ ! -f "$CI_WORKFLOW" ]; then
   printf '%s\n' "GitHub Actions check workflow is missing." >&2
   exit 1
 fi
 
-for workflow_contract in \
-  "permissions:" \
-  "contents: read" \
-  "runs-on: ubuntu-24.04" \
-  "cancel-in-progress: true" \
-  "timeout-minutes: 5" \
-  "workflow_dispatch:" \
-  "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" \
-  'ANDROID_HOME: ""' \
-  'ANDROID_SDK_ROOT: ""' \
-  "make check"; do
-  if ! grep -Fq "$workflow_contract" "$ROOT_DIR/.github/workflows/check.yml"; then
-    printf '%s\n' "GitHub Actions workflow must keep contract: $workflow_contract" >&2
-    exit 1
-  fi
-done
+workflow_paths=$(find "$ROOT_DIR/.github/workflows" -type f \( -name '*.yml' -o -name '*.yaml' \) -print)
+if [ "$workflow_paths" != "$CI_WORKFLOW" ]; then
+  printf '%s\n' "check.yml must remain the only approved GitHub Actions workflow." >&2
+  exit 1
+fi
+
+if [ "$(cat "$CI_WORKFLOW")" != "$(expected_ci_workflow)" ]; then
+  printf '%s\n' "GitHub Actions check workflow must match the approved SDK-free security baseline." >&2
+  exit 1
+fi
+
+if [ ! -f "$CODEOWNERS" ] ||
+  [ "$(wc -l < "$CODEOWNERS" | tr -d ' ')" -ne 4 ] ||
+  ! grep -Fxq '/.github/CODEOWNERS @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/.github/workflows/ @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/Makefile @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/scripts/check-baseline.sh @garethpaul' "$CODEOWNERS"; then
+  printf '%s\n' "CODEOWNERS must protect itself, the workflow, Makefile, and baseline checker." >&2
+  exit 1
+fi
 
 for make_contract in \
   'ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' \
@@ -397,26 +439,6 @@ if ! grep -Fq "GATT connection callbacks ignore stale instances" "$README"; then
   exit 1
 fi
 
-if ! grep -Fq "GitHub Actions" "$README"; then
-  printf '%s\n' "README must document the GitHub Actions baseline." >&2
-  exit 1
-fi
-
-if ! grep -Fq "GitHub Actions" "$ROOT_DIR/VISION.md"; then
-  printf '%s\n' "VISION must document the GitHub Actions baseline." >&2
-  exit 1
-fi
-
-if ! grep -Fq "GitHub Actions" "$ROOT_DIR/SECURITY.md"; then
-  printf '%s\n' "SECURITY must document the GitHub Actions baseline." >&2
-  exit 1
-fi
-
-if ! grep -Fq "GitHub Actions" "$ROOT_DIR/CHANGES.md"; then
-  printf '%s\n' "CHANGES must record the GitHub Actions baseline." >&2
-  exit 1
-fi
-
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-broadcast-privacy.md"; then
   printf '%s\n' "HRM broadcast privacy plan must document make check verification." >&2
   exit 1
@@ -440,16 +462,6 @@ fi
 if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-10-hrm-gatt-callback-ownership.md" || \
    ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-10-hrm-gatt-callback-ownership.md"; then
   printf '%s\n' "HRM GATT callback ownership plan must record completed status and make check verification." >&2
-  exit 1
-fi
-
-if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"; then
-  printf '%s\n' "HRM CI baseline plan must be completed." >&2
-  exit 1
-fi
-
-if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"; then
-  printf '%s\n' "HRM CI baseline plan must document make check verification." >&2
   exit 1
 fi
 

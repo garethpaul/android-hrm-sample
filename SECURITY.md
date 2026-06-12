@@ -34,6 +34,11 @@ Helpful reports include:
   optional data views are unavailable.
 - Pinned, read-only GitHub Actions runs the root `make check` baseline without
   inheriting hosted Android SDK state.
+- Hosted checkout credentials are not persisted. Self-protecting CODEOWNERS
+  assigns the workflow, Makefile, and baseline checker to the repository owner;
+  repository rules should require that approval.
+- `check.yml` remains the only approved workflow until another workflow
+  receives an explicit least-privilege security contract.
 
 ## Mobile Privacy Notes
 

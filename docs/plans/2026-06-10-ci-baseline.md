@@ -18,6 +18,11 @@ Android SDK is configured.
 - Removed the maintainer-specific default SDK path and cleared ambient hosted
   SDK variables so CI cannot accidentally invoke the unsupported Gradle path.
 - Extended the SDK-free baseline and docs so the CI gate remains visible.
+- Disabled persisted checkout credentials and replaced partial string matching
+  with a canonical single-workflow contract.
+- Added self-protecting CODEOWNERS coverage for the workflow, Makefile, and
+  baseline checker; repository rules remain responsible for requiring owner
+  approval.
 
 Android SDK-backed CI should follow migration of the historical Gradle,
 Android plugin, repository, and API-level baseline.
