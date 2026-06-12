@@ -11,6 +11,8 @@
 - Added pinned, read-only GitHub Actions CI that runs the root `make check`
   baseline with a bounded timeout and explicit SDK-free execution.
 - Removed the maintainer-specific Android SDK path from the Makefile.
+- Disabled persisted checkout credentials, added self-protecting CODEOWNERS,
+  and replaced partial workflow checks with one canonical workflow contract.
 
 ## 2026-06-09
 

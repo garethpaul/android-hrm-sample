@@ -8,7 +8,56 @@ SCAN_ACTIVITY="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/Device
 BLE_SERVICE="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java"
 README="$ROOT_DIR/README.md"
 RES_DIR="$ROOT_DIR/Application/src/main/res"
+CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
+CODEOWNERS="$ROOT_DIR/.github/CODEOWNERS"
 DATA_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hrm-data-callback-ownership.md"
+CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
+HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
+
+expected_ci_workflow() {
+  cat <<'EOF'
+name: Check
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Install Android SDK packages
+        run: '"${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-22" "build-tools;24.0.3"'
+
+      - name: Set up Java 8
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: corretto
+          java-version: "8"
+
+      - name: Run full verification
+        run: make check
+EOF
+}
 
 require_contains() {
   pattern=$1
@@ -38,6 +87,10 @@ require_contains "compileSdkVersion 22" \
   "Compile SDK must stay pinned to 22."
 require_contains "buildToolsVersion \"24.0.3\"" \
   "Android build-tools must stay pinned to 24.0.3."
+require_contains "aaptOptions {" \
+  "HRM module must configure deterministic legacy PNG processing."
+require_contains "useNewCruncher false" \
+  "HRM module must avoid the nondeterministic queued PNG cruncher."
 require_contains "targetSdkVersion 22" \
   "Target SDK must stay pinned to 22."
 require_contains "com.android.support:support-v4:21.0.2" \
@@ -288,27 +341,55 @@ if [ ! -f "$ROOT_DIR/CHANGES.md" ]; then
   exit 1
 fi
 
-if [ ! -f "$ROOT_DIR/.github/workflows/check.yml" ]; then
+if [ ! -f "$CI_WORKFLOW" ]; then
   printf '%s\n' "GitHub Actions check workflow is missing." >&2
   exit 1
 fi
 
-for workflow_contract in \
-  "permissions:" \
-  "contents: read" \
-  "runs-on: ubuntu-24.04" \
-  "cancel-in-progress: true" \
-  "timeout-minutes: 5" \
-  "workflow_dispatch:" \
-  "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" \
-  'ANDROID_HOME: ""' \
-  'ANDROID_SDK_ROOT: ""' \
-  "make check"; do
-  if ! grep -Fq "$workflow_contract" "$ROOT_DIR/.github/workflows/check.yml"; then
-    printf '%s\n' "GitHub Actions workflow must keep contract: $workflow_contract" >&2
-    exit 1
-  fi
-done
+workflow_paths=$(find "$ROOT_DIR/.github/workflows" -type f \( -name '*.yml' -o -name '*.yaml' \) -print)
+if [ "$workflow_paths" != "$CI_WORKFLOW" ]; then
+  printf '%s\n' "check.yml must remain the only approved GitHub Actions workflow." >&2
+  exit 1
+fi
+
+if [ "$(cat "$CI_WORKFLOW")" != "$(expected_ci_workflow)" ]; then
+  printf '%s\n' "GitHub Actions check workflow must match the approved full Android security baseline." >&2
+  exit 1
+fi
+
+if [ ! -f "$CI_PLAN" ] || \
+   ! grep -Fq "Status: Completed" "$CI_PLAN" || \
+   ! grep -Fq "build-tools 24.0.3" "$CI_PLAN" || \
+   ! grep -Fq 'complete `make check` gate' "$CI_PLAN"; then
+  printf '%s\n' "HRM CI baseline plan must document the complete hosted Android gate." >&2
+  exit 1
+fi
+
+if [ ! -f "$HOSTED_ANDROID_PLAN" ] || \
+   ! grep -Fq "Status: Completed" "$HOSTED_ANDROID_PLAN" || \
+   ! grep -Fq "make check" "$HOSTED_ANDROID_PLAN" || \
+   ! grep -Fq "zero lint issues" "$HOSTED_ANDROID_PLAN" || \
+   ! grep -Fq 'pull-request run `27401864615`' "$HOSTED_ANDROID_PLAN" || \
+   ! grep -Fq '`dbfd8b1a8c2bfd52444c3210f508823c2445453b`' "$HOSTED_ANDROID_PLAN"; then
+  printf '%s\n' "Hosted HRM verification plan must record completed local and exact-head hosted evidence." >&2
+  exit 1
+fi
+
+if ! grep -Fq "canonical GitHub Actions workflow installs Android API 22" "$README" || \
+   ! grep -Fq "2026-06-12-hosted-android-verification.md" "$README"; then
+  printf '%s\n' "README must document the hosted Android gate and plan." >&2
+  exit 1
+fi
+
+if [ ! -f "$CODEOWNERS" ] ||
+  [ "$(wc -l < "$CODEOWNERS" | tr -d ' ')" -ne 4 ] ||
+  ! grep -Fxq '/.github/CODEOWNERS @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/.github/workflows/ @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/Makefile @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/scripts/check-baseline.sh @garethpaul' "$CODEOWNERS"; then
+  printf '%s\n' "CODEOWNERS must protect itself, the workflow, Makefile, and baseline checker." >&2
+  exit 1
+fi
 
 for make_contract in \
   'ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' \
@@ -444,27 +525,6 @@ if ! grep -Fq "service, read, and notification callbacks reject stale GATT insta
   printf '%s\n' "README must document complete GATT data callback ownership guards." >&2
   exit 1
 fi
-
-if ! grep -Fq "GitHub Actions" "$README"; then
-  printf '%s\n' "README must document the GitHub Actions baseline." >&2
-  exit 1
-fi
-
-if ! grep -Fq "GitHub Actions" "$ROOT_DIR/VISION.md"; then
-  printf '%s\n' "VISION must document the GitHub Actions baseline." >&2
-  exit 1
-fi
-
-if ! grep -Fq "GitHub Actions" "$ROOT_DIR/SECURITY.md"; then
-  printf '%s\n' "SECURITY must document the GitHub Actions baseline." >&2
-  exit 1
-fi
-
-if ! grep -Fq "GitHub Actions" "$ROOT_DIR/CHANGES.md"; then
-  printf '%s\n' "CHANGES must record the GitHub Actions baseline." >&2
-  exit 1
-fi
-
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-broadcast-privacy.md"; then
   printf '%s\n' "HRM broadcast privacy plan must document make check verification." >&2
   exit 1
@@ -488,16 +548,6 @@ fi
 if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-10-hrm-gatt-callback-ownership.md" || \
    ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-10-hrm-gatt-callback-ownership.md"; then
   printf '%s\n' "HRM GATT callback ownership plan must record completed status and make check verification." >&2
-  exit 1
-fi
-
-if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"; then
-  printf '%s\n' "HRM CI baseline plan must be completed." >&2
-  exit 1
-fi
-
-if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"; then
-  printf '%s\n' "HRM CI baseline plan must document make check verification." >&2
   exit 1
 fi
 
