@@ -34,6 +34,8 @@ Priority:
 - Keep GATT characteristic operations safe when callbacks or callers omit data
 - Keep stale GATT selection callbacks from indexing replaced characteristic
   groups or using unavailable BLE services
+- Keep Bluetooth service binding ownership explicit and guard activity actions
+  until the bound service is available
 - Keep GATT connection state scoped to the currently owned callback instance
 - Keep scan and control activity startup safe when legacy ActionBar presentation
   is unavailable

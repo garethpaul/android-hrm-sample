@@ -17,6 +17,7 @@ COMPONENT_EXPORT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-component-export-boun
 GATT_SELECTION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-gatt-selection-guards.md"
 NOTIFICATION_REGISTRATION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-notification-registration-guard.md"
 DESCRIPTOR_ROLLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-descriptor-write-rollback.md"
+SERVICE_AVAILABILITY_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-service-availability.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
 WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
@@ -747,6 +748,82 @@ if ! grep -Fq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-10-hrm-gatt-call
   printf '%s\n' "HRM GATT callback ownership plan must record completed status and make check verification." >&2
   exit 1
 fi
+
+for service_availability_contract in \
+  "private boolean mServiceBound = false;" \
+  "mServiceBound = bindService(" \
+  'Log.e(TAG, "Unable to bind Bluetooth service.");' \
+  "private boolean bluetoothServiceAvailable()" \
+  'Log.w(TAG, "Bluetooth service is unavailable.");'; do
+  if ! grep -Fq "$service_availability_contract" "$CONTROL_ACTIVITY"; then
+    printf '%s\n' "HRM service availability must keep contract: $service_availability_contract" >&2
+    exit 1
+  fi
+done
+
+if ! awk '
+  /mServiceBound = bindService\(/ { bind = NR; in_bind = 1 }
+  in_bind && /if \(!mServiceBound\)/ { bind_guard = NR }
+  in_bind && /finish\(\);/ { bind_finish = NR; in_bind = 0 }
+  /protected void onDestroy\(\)/ { in_destroy = 1 }
+  in_destroy && /if \(mServiceBound\)/ { unbind_guard = NR }
+  in_destroy && /unbindService\(mServiceConnection\);/ { unbind = NR }
+  in_destroy && /mServiceBound = false;/ { unbind_clear = NR }
+  in_destroy && /super\.onDestroy\(\);/ { destroy_super = NR; in_destroy = 0 }
+  END {
+    exit !(bind && bind_guard && bind_finish && bind < bind_guard && bind_guard < bind_finish &&
+      unbind_guard && unbind && unbind_clear && destroy_super &&
+      unbind_guard < unbind && unbind < unbind_clear && unbind_clear < destroy_super)
+  }
+' "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "HRM activity must guard rejected binds and unbind only owned service connections." >&2
+  exit 1
+fi
+
+service_guard_calls=$(grep -Fc "if (!bluetoothServiceAvailable())" "$CONTROL_ACTIVITY" || true)
+if [ "$service_guard_calls" -ne 3 ]; then
+  printf '%s\n' "HRM discovery, connect, and disconnect paths must all guard service availability." >&2
+  exit 1
+fi
+
+if ! awk '
+  /ACTION_GATT_SERVICES_DISCOVERED\.equals\(action\)/ { in_discovery = 1 }
+  in_discovery && /if \(!bluetoothServiceAvailable\(\)\)/ { discovery_guard = NR }
+  in_discovery && /displayGattServices\(mBluetoothLeService\.getSupportedGattServices\(\)\);/ {
+    discovery_use = NR; in_discovery = 0
+  }
+  /case com\.garethpaul\.app\.hrm\.R\.id\.menu_connect:/ { in_connect = 1 }
+  in_connect && /if \(!bluetoothServiceAvailable\(\)\)/ { connect_guard = NR }
+  in_connect && /mBluetoothLeService\.connect\(mDeviceAddress\);/ { connect_use = NR; in_connect = 0 }
+  /case com\.garethpaul\.app\.hrm\.R\.id\.menu_disconnect:/ { in_disconnect = 1 }
+  in_disconnect && /if \(!bluetoothServiceAvailable\(\)\)/ { disconnect_guard = NR }
+  in_disconnect && /mBluetoothLeService\.disconnect\(\);/ { disconnect_use = NR; in_disconnect = 0 }
+  END {
+    exit !(discovery_guard && discovery_use && discovery_guard < discovery_use &&
+      connect_guard && connect_use && connect_guard < connect_use &&
+      disconnect_guard && disconnect_use && disconnect_guard < disconnect_use)
+  }
+' "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "HRM service-dependent activity paths must guard before dereferencing the service." >&2
+  exit 1
+fi
+
+if [ ! -f "$SERVICE_AVAILABILITY_PLAN" ] || \
+   ! grep -Fq "Status: Completed" "$SERVICE_AVAILABILITY_PLAN" || \
+   ! grep -Fq "## Verification Completed" "$SERVICE_AVAILABILITY_PLAN" || \
+   ! grep -Fq "make check" "$SERVICE_AVAILABILITY_PLAN" || \
+   ! grep -Fq "hostile mutations" "$SERVICE_AVAILABILITY_PLAN"; then
+  printf '%s\n' "HRM service availability plan must record completed verification." >&2
+  exit 1
+fi
+
+for service_doc in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! tr '\n' ' ' < "$service_doc" | tr -s '[:space:]' ' ' | \
+      grep -Fiq "Bluetooth service binding ownership"; then
+    printf '%s\n' "$service_doc must document Bluetooth service binding ownership." >&2
+    exit 1
+  fi
+done
 
 if [ ! -x "$GRADLEW" ] || [ ! -f "$GRADLEW_BAT" ] || \
    [ ! -f "$WRAPPER_JAR" ] || [ ! -f "$WRAPPER_PROPERTIES" ]; then

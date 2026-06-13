@@ -34,6 +34,9 @@ Helpful reports include:
   optional data views are unavailable.
 - Stale GATT selection callbacks fail closed before indexing mutable
   characteristic groups or using an unavailable BLE service.
+- Bluetooth service binding ownership is explicit so failed binding and
+  service-dependent activity actions do not trigger unowned unbinds or null
+  service dereferences.
 - Failed local GATT notification registration returns before heart-rate
   descriptor mutation or write initiation.
 - Heart-rate descriptor-phase failures roll back local notification state with

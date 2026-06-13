@@ -1,6 +1,6 @@
 # Guard HRM Service Availability
 
-Status: Planned
+Status: Completed
 
 ## Context
 
@@ -39,3 +39,26 @@ delayed binding can therefore cause lifecycle or user-action crashes.
 - `git diff --check`, artifact, conflict-marker, and credential-shaped
   added-line inspection.
 - Exact-head hosted Android validation after push.
+
+## Work Completed
+
+- Recorded successful `bindService()` ownership separately from the nullable
+  service reference.
+- Finished with a generic diagnostic when Android rejects the bind request.
+- Guarded destruction so only an owned binding is unbound and ownership is
+  cleared before superclass teardown.
+- Guarded discovered-services and connect/disconnect menu paths before service
+  dereferences.
+- Added method-bounded contracts and updated user, security, vision, and change
+  guidance.
+
+## Verification Completed
+
+- `sh -n scripts/check-baseline.sh` passed.
+- Local `make check` and external-working-directory `make -C` execution passed
+  all SDK-free contracts. Android lint, Gradle check, and build truthfully
+  skipped because no Android SDK is configured locally.
+- Eleven focused hostile mutations were rejected: ignored and inverted bind
+  results, missing bind-failure finish, unguarded unbind, missing ownership
+  reset, unguarded discovery/connect/disconnect, reflected diagnostics, README
+  guidance, and plan-status rollback.

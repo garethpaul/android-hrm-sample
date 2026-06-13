@@ -46,6 +46,7 @@ public class DeviceControlActivity extends Activity {
     private ArrayList<ArrayList<BluetoothGattCharacteristic>> mGattCharacteristics =
             new ArrayList<ArrayList<BluetoothGattCharacteristic>>();
     private boolean mConnected = false;
+    private boolean mServiceBound = false;
     private BluetoothGattCharacteristic mNotifyCharacteristic;
 
     private final String LIST_NAME = "NAME";
@@ -91,6 +92,9 @@ public class DeviceControlActivity extends Activity {
                 invalidateOptionsMenu();
                 clearUI();
             } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
+                if (!bluetoothServiceAvailable()) {
+                    return;
+                }
                 // Show all the supported services and characteristics on the user interface.
                 displayGattServices(mBluetoothLeService.getSupportedGattServices());
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
@@ -169,7 +173,14 @@ public class DeviceControlActivity extends Activity {
 
         configureActionBar();
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
-        bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+        mServiceBound = bindService(
+                gattServiceIntent,
+                mServiceConnection,
+                BIND_AUTO_CREATE);
+        if (!mServiceBound) {
+            Log.e(TAG, "Unable to bind Bluetooth service.");
+            finish();
+        }
     }
 
     private void configureActionBar() {
@@ -200,9 +211,12 @@ public class DeviceControlActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
-        unbindService(mServiceConnection);
+        if (mServiceBound) {
+            unbindService(mServiceConnection);
+            mServiceBound = false;
+        }
         mBluetoothLeService = null;
+        super.onDestroy();
     }
 
     @Override
@@ -222,9 +236,15 @@ public class DeviceControlActivity extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch(item.getItemId()) {
             case com.garethpaul.app.hrm.R.id.menu_connect:
+                if (!bluetoothServiceAvailable()) {
+                    return true;
+                }
                 mBluetoothLeService.connect(mDeviceAddress);
                 return true;
             case com.garethpaul.app.hrm.R.id.menu_disconnect:
+                if (!bluetoothServiceAvailable()) {
+                    return true;
+                }
                 mBluetoothLeService.disconnect();
                 return true;
             case android.R.id.home:
@@ -232,6 +252,15 @@ public class DeviceControlActivity extends Activity {
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private boolean bluetoothServiceAvailable() {
+        if (mBluetoothLeService == null) {
+            Log.w(TAG, "Bluetooth service is unavailable.");
+            return false;
+        }
+
+        return true;
     }
 
     private void updateConnectionState(final int resourceId) {
