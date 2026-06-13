@@ -34,6 +34,8 @@ Helpful reports include:
   optional data views are unavailable.
 - Stale GATT selection callbacks fail closed before indexing mutable
   characteristic groups or using an unavailable BLE service.
+- Failed local GATT notification registration returns before heart-rate
+  descriptor mutation or write initiation.
 - Pinned, read-only GitHub Actions runs the root `make check` baseline without
   inheriting hosted Android SDK state.
 - The baseline pins and verifies the wrapper JAR and Gradle distribution checksums.

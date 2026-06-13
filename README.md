@@ -91,8 +91,9 @@ still requires a compatible device or emulator.
 
 - No required secret or credential file was identified in the repository scan. If you add integrations later, keep secrets out of git.
 - This legacy Android baseline pins Android build-tools 24.0.3 and Android support libraries 21.0.2.
-- Heart-rate notification descriptor writes are null-guarded and use the
-  matching enable or disable descriptor value.
+- Heart-rate notification descriptor writes occur only after local notification
+  registration succeeds, remain null-guarded, and use the matching enable or
+  disable descriptor value.
 - GATT broadcasts are package-scoped before delivery, and exact heart-rate
   values are not written to debug logs.
 - The explicit HRM component export boundary exposes only the launcher
