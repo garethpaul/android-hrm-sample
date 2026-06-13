@@ -95,6 +95,8 @@ still requires a compatible device or emulator.
   matching enable or disable descriptor value.
 - GATT broadcasts are package-scoped before delivery, and exact heart-rate
   values are not written to debug logs.
+- The explicit HRM component export boundary exposes only the launcher
+  activity; the device-control activity and BLE service remain app-internal.
 - BLE scan startup guards unsupported devices and missing Bluetooth manager
   services before requesting a Bluetooth adapter.
 - BLE scan lifecycle guards nullable Bluetooth adapters, handlers, stopped list
@@ -111,6 +113,8 @@ still requires a compatible device or emulator.
   before publishing discovered services or sensor data.
 - Heart-rate parsing reads the format flag from measurement byte zero and
   rejects truncated flag or value fields without unboxing null values.
+- See `docs/plans/2026-06-13-hrm-component-export-boundary.md` for the explicit
+  manifest contract and completed verification evidence.
 
 ## Security and Privacy Notes
 

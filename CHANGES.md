@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-13
+
+- Added an explicit HRM component export boundary: the launcher remains
+  exported while the device-control activity and BLE service are app-internal.
+
 ## 2026-06-12
 
 - Regenerated the Gradle wrapper bootstrap with official Gradle 8.14.5 tooling

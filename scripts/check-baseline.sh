@@ -6,12 +6,14 @@ BUILD_FILE="$ROOT_DIR/Application/build.gradle"
 CONTROL_ACTIVITY="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java"
 SCAN_ACTIVITY="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/DeviceScanActivity.java"
 BLE_SERVICE="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java"
+MANIFEST="$ROOT_DIR/Application/src/main/AndroidManifest.xml"
 README="$ROOT_DIR/README.md"
 SECURITY="$ROOT_DIR/SECURITY.md"
 RES_DIR="$ROOT_DIR/Application/src/main/res"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 CODEOWNERS="$ROOT_DIR/.github/CODEOWNERS"
 DATA_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hrm-data-callback-ownership.md"
+COMPONENT_EXPORT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-component-export-boundary.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
 WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
@@ -455,10 +457,43 @@ if ! grep -Fq "scanLeDevice(false);" "$SCAN_ACTIVITY"; then
   exit 1
 fi
 
-if ! grep -Fq 'android:allowBackup="false"' "$ROOT_DIR/Application/src/main/AndroidManifest.xml"; then
+if ! grep -Fq 'android:allowBackup="false"' "$MANIFEST"; then
   printf '%s\n' "Application backup behavior must be explicit." >&2
   exit 1
 fi
+
+if [ "$(grep -Fc 'android:exported=' "$MANIFEST" || true)" -ne 3 ]; then
+  printf '%s\n' "HRM manifest must keep exactly three explicit component export boundaries." >&2
+  exit 1
+fi
+manifest_compact=$(tr '\n' ' ' < "$MANIFEST" | tr -s '[:space:]' ' ')
+for component_export_contract in \
+  '<activity android:name="com.garethpaul.app.hrm.DeviceScanActivity" android:exported="true" android:label="@string/app_name">' \
+  '<activity android:name="com.garethpaul.app.hrm.DeviceControlActivity" android:exported="false"/>' \
+  '<service android:name="com.garethpaul.app.hrm.BluetoothLeService" android:enabled="true" android:exported="false"/>'; do
+  if ! printf '%s\n' "$manifest_compact" | grep -Fq "$component_export_contract"; then
+    printf '%s\n' "Missing HRM component export contract: $component_export_contract" >&2
+    exit 1
+  fi
+done
+if [ "$(grep -Fc 'android:exported="false"' "$MANIFEST" || true)" -ne 2 ]; then
+  printf '%s\n' "Only the launcher activity may be exported." >&2
+  exit 1
+fi
+if [ ! -f "$COMPONENT_EXPORT_PLAN" ] || \
+   ! grep -Fq "Status: Completed" "$COMPONENT_EXPORT_PLAN" || \
+   ! grep -Fq "make check" "$COMPONENT_EXPORT_PLAN" || \
+   ! grep -Fq "hostile mutations" "$COMPONENT_EXPORT_PLAN"; then
+  printf '%s\n' "HRM component export plan must record completed verification." >&2
+  exit 1
+fi
+for component_export_doc in "$README" "$SECURITY" "$ROOT_DIR/CHANGES.md"; do
+  if ! tr '\n' ' ' < "$component_export_doc" | tr -s '[:space:]' ' ' | \
+      grep -Fiq "explicit HRM component export boundary"; then
+    printf '%s\n' "$component_export_doc must document the explicit HRM component export boundary." >&2
+    exit 1
+  fi
+done
 
 if [ ! -f "$RES_DIR/drawable-nodpi/tile.9.png" ]; then
   printf '%s\n' "Tile background must stay in drawable-nodpi." >&2
