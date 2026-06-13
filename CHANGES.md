@@ -2,6 +2,10 @@
 
 ## 2026-06-13
 
+- Recorded Bluetooth service binding ownership, handled rejected binds, and
+  guarded destruction against unowned unbinds.
+- Guarded service discovery and connect/disconnect menu actions while the bound
+  Bluetooth service is unavailable.
 - Gated heart-rate client configuration descriptor writes on successful local
   notification registration.
 - Made descriptor-phase failures roll back local notification state when the

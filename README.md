@@ -112,6 +112,9 @@ still requires a compatible device or emulator.
   notification, or data-broadcast parsing work.
 - Stale GATT selection callbacks reject missing services, groups,
   characteristics, and out-of-range positions before BLE operations.
+- Bluetooth service binding ownership is recorded explicitly; rejected binds,
+  destruction, discovery, and menu actions fail closed while the service is
+  unavailable.
 - GATT connection callbacks ignore stale instances, reject failed status
   transitions, and start discovery through the active callback object.
 - GATT service, read, and notification callbacks reject stale GATT instances
