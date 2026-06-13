@@ -29,6 +29,7 @@ Priority:
   packets safely
 - Keep heart-rate notification descriptor writes null-safe and reversible
 - Keep descriptor writes gated on successful local notification registration
+- Ensure descriptor-phase failures roll back local notification state
 - Keep heart-rate and GATT update delivery scoped to the app process boundary
 - Keep GATT characteristic operations safe when callbacks or callers omit data
 - Keep stale GATT selection callbacks from indexing replaced characteristic

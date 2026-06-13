@@ -16,6 +16,7 @@ DATA_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hrm-data-callback-ownership.
 COMPONENT_EXPORT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-component-export-boundary.md"
 GATT_SELECTION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-gatt-selection-guards.md"
 NOTIFICATION_REGISTRATION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-notification-registration-guard.md"
+DESCRIPTOR_ROLLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-descriptor-write-rollback.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
 WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
@@ -175,6 +176,38 @@ if [ "$NOTIFICATION_BEFORE_DESCRIPTOR" = "$NOTIFICATION_COMPACT" ]; then
   printf '%s\n' "GATT notification registration guard must precede descriptor lookup." >&2
   exit 1
 fi
+
+ROLLBACK_METHOD=$(sed -n \
+  '/private void rollbackCharacteristicNotification/,/^    }/p' \
+  "$BLE_SERVICE")
+ROLLBACK_COMPACT=$(printf '%s\n' "$ROLLBACK_METHOD" | tr -d '[:space:]')
+for descriptor_rollback_contract in \
+  'if(descriptor==null){Log.w(TAG,"Heartratenotificationdescriptorismissing.");rollbackCharacteristicNotification(characteristic,enabled);return;}' \
+  'booleandescriptorValueSet=descriptor.setValue(descriptorValue);if(!descriptorValueSet){Log.w(TAG,"Unabletosetheartratenotificationdescriptorvalue.");rollbackCharacteristicNotification(characteristic,enabled);return;}' \
+  'booleandescriptorWriteQueued=mBluetoothGatt.writeDescriptor(descriptor);if(!descriptorWriteQueued){Log.w(TAG,"Unabletoqueueheartratenotificationdescriptorwrite.");rollbackCharacteristicNotification(characteristic,enabled);}' ; do
+  if ! printf '%s\n' "$NOTIFICATION_COMPACT" | grep -Fq "$descriptor_rollback_contract"; then
+    printf '%s\n' "GATT descriptor failure must keep rollback contract: $descriptor_rollback_contract" >&2
+    exit 1
+  fi
+done
+for rollback_helper_contract in \
+  'privatevoidrollbackCharacteristicNotification(BluetoothGattCharacteristiccharacteristic,booleanenabled)' \
+  'booleanrollbackSet=mBluetoothGatt.setCharacteristicNotification(characteristic,!enabled);' \
+  'if(!rollbackSet){Log.w(TAG,"UnabletorollbacklocalGATTnotificationstate.");}'; do
+  if ! printf '%s\n' "$ROLLBACK_COMPACT" | grep -Fq "$rollback_helper_contract"; then
+    printf '%s\n' "GATT descriptor rollback helper must keep contract: $rollback_helper_contract" >&2
+    exit 1
+  fi
+done
+for reflected_descriptor_log in \
+  '"Unable to set heart rate notification descriptor value." +' \
+  '"Unable to queue heart rate notification descriptor write." +' \
+  '"Unable to roll back local GATT notification state." +'; do
+  if grep -Fq "$reflected_descriptor_log" "$BLE_SERVICE"; then
+    printf '%s\n' "GATT descriptor rollback logs must remain generic." >&2
+    exit 1
+  fi
+done
 
 for pattern in \
   "private void configureActionBar()" \
@@ -671,6 +704,21 @@ for notification_doc in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/C
   if ! printf '%s\n' "$normalized_notification_doc" | grep -Fiq "notification registration" || \
      ! printf '%s\n' "$normalized_notification_doc" | grep -Fiq "descriptor"; then
     printf '%s\n' "$notification_doc must document notification registration descriptor gating." >&2
+    exit 1
+  fi
+done
+
+if [ ! -f "$DESCRIPTOR_ROLLBACK_PLAN" ] || \
+   ! grep -Fq "Status: Completed" "$DESCRIPTOR_ROLLBACK_PLAN" || \
+   ! grep -Fq "make check" "$DESCRIPTOR_ROLLBACK_PLAN" || \
+   ! grep -Fq "hostile mutations" "$DESCRIPTOR_ROLLBACK_PLAN"; then
+  printf '%s\n' "HRM descriptor rollback plan must record completed verification." >&2
+  exit 1
+fi
+for rollback_doc in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! tr '\n' ' ' < "$rollback_doc" | tr -s '[:space:]' ' ' | \
+      grep -Fiq "descriptor-phase failures roll back local notification state"; then
+    printf '%s\n' "$rollback_doc must document descriptor rollback consistency." >&2
     exit 1
   fi
 done

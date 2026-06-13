@@ -350,14 +350,36 @@ public class BluetoothLeService extends Service {
                     UUID.fromString(SampleGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
             if (descriptor == null) {
                 Log.w(TAG, "Heart rate notification descriptor is missing.");
+                rollbackCharacteristicNotification(characteristic, enabled);
                 return;
             }
 
             byte[] descriptorValue = enabled
                     ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
                     : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE;
-            descriptor.setValue(descriptorValue);
-            mBluetoothGatt.writeDescriptor(descriptor);
+            boolean descriptorValueSet = descriptor.setValue(descriptorValue);
+            if (!descriptorValueSet) {
+                Log.w(TAG, "Unable to set heart rate notification descriptor value.");
+                rollbackCharacteristicNotification(characteristic, enabled);
+                return;
+            }
+
+            boolean descriptorWriteQueued = mBluetoothGatt.writeDescriptor(descriptor);
+            if (!descriptorWriteQueued) {
+                Log.w(TAG, "Unable to queue heart rate notification descriptor write.");
+                rollbackCharacteristicNotification(characteristic, enabled);
+            }
+        }
+    }
+
+    private void rollbackCharacteristicNotification(
+            BluetoothGattCharacteristic characteristic,
+            boolean enabled) {
+        boolean rollbackSet = mBluetoothGatt.setCharacteristicNotification(
+                characteristic,
+                !enabled);
+        if (!rollbackSet) {
+            Log.w(TAG, "Unable to roll back local GATT notification state.");
         }
     }
 

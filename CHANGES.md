@@ -4,6 +4,8 @@
 
 - Gated heart-rate client configuration descriptor writes on successful local
   notification registration.
+- Made descriptor-phase failures roll back local notification state when the
+  descriptor, value assignment, or write queue is unavailable.
 - Guarded stale GATT selection callbacks against unavailable services, missing
   entries, and out-of-range group or child positions.
 - Added an explicit HRM component export boundary: the launcher remains

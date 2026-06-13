@@ -36,6 +36,8 @@ Helpful reports include:
   characteristic groups or using an unavailable BLE service.
 - Failed local GATT notification registration returns before heart-rate
   descriptor mutation or write initiation.
+- Heart-rate descriptor-phase failures roll back local notification state with
+  generic diagnostics and without exposing BLE identifiers or values.
 - Pinned, read-only GitHub Actions runs the root `make check` baseline without
   inheriting hosted Android SDK state.
 - The baseline pins and verifies the wrapper JAR and Gradle distribution checksums.
