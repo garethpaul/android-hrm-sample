@@ -30,6 +30,8 @@ Priority:
 - Keep heart-rate notification descriptor writes null-safe and reversible
 - Keep heart-rate and GATT update delivery scoped to the app process boundary
 - Keep GATT characteristic operations safe when callbacks or callers omit data
+- Keep stale GATT selection callbacks from indexing replaced characteristic
+  groups or using unavailable BLE services
 - Keep GATT connection state scoped to the currently owned callback instance
 - Keep scan and control activity startup safe when legacy ActionBar presentation
   is unavailable

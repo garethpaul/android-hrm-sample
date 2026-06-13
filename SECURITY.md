@@ -32,6 +32,8 @@ Helpful reports include:
 - Dependency manifests detected: build.gradle. Dependency updates should preserve lockfiles when present and avoid introducing packages without a clear maintenance reason.
 - Stale BLE control layouts should not crash local GATT display paths when
   optional data views are unavailable.
+- Stale GATT selection callbacks fail closed before indexing mutable
+  characteristic groups or using an unavailable BLE service.
 - Pinned, read-only GitHub Actions runs the root `make check` baseline without
   inheriting hosted Android SDK state.
 - The baseline pins and verifies the wrapper JAR and Gradle distribution checksums.

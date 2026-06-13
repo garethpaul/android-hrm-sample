@@ -1,6 +1,6 @@
 # HRM GATT Selection Guards
 
-Status: Planned
+Status: Completed
 
 ## Priority
 
@@ -62,7 +62,14 @@ Document the stale-selection boundary and record exact verification.
 
 ## Verification
 
-Pending implementation and execution.
+- An isolated SDK-backed `make check` passed the SDK-free baseline, zero-issue
+  debug/release Android lint, debug/release Java compilation and checks, and
+  debug APK assembly. Existing deprecation and unchecked compiler notes remain.
+- Eight hostile mutations were rejected across service, group, child,
+  characteristic, and completed-plan guards.
+- Canonical and external-directory SDK-backed `make check` both passed against
+  the exact completed implementation with the same static, lint, compilation,
+  check, and APK assembly coverage.
 
 ## Sources
 
