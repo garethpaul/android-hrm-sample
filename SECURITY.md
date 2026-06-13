@@ -42,6 +42,8 @@ Helpful reports include:
   repository rules should require that approval.
 - `check.yml` remains the only approved workflow until another workflow
   receives an explicit least-privilege security contract.
+- The explicit HRM component export boundary keeps the launcher activity
+  public while the device-control activity and BLE service are non-exported.
 
 ## Mobile Privacy Notes
 

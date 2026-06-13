@@ -38,14 +38,20 @@
         android:icon="@drawable/ic_launcher"
         android:theme="@android:style/Theme.Holo.Light">
         <activity android:name="com.garethpaul.app.hrm.DeviceScanActivity"
+            android:exported="true"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <activity android:name="com.garethpaul.app.hrm.DeviceControlActivity"/>
-        <service android:name="com.garethpaul.app.hrm.BluetoothLeService" android:enabled="true"/>
+        <activity
+            android:name="com.garethpaul.app.hrm.DeviceControlActivity"
+            android:exported="false"/>
+        <service
+            android:name="com.garethpaul.app.hrm.BluetoothLeService"
+            android:enabled="true"
+            android:exported="false"/>
     </application>
 
 </manifest>
