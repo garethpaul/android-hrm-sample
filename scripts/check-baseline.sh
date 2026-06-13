@@ -14,6 +14,7 @@ CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 CODEOWNERS="$ROOT_DIR/.github/CODEOWNERS"
 DATA_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hrm-data-callback-ownership.md"
 COMPONENT_EXPORT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-component-export-boundary.md"
+GATT_SELECTION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-gatt-selection-guards.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
 WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
@@ -590,6 +591,48 @@ if ! grep -Fq "service, read, and notification callbacks reject stale GATT insta
   printf '%s\n' "README must document complete GATT data callback ownership guards." >&2
   exit 1
 fi
+
+GATT_SELECTION_CALLBACK=$(sed -n \
+  '/private final ExpandableListView.OnChildClickListener servicesListClickListner/,/private void clearUI()/p' \
+  "$CONTROL_ACTIVITY")
+for selection_contract in \
+  "mBluetoothLeService == null" \
+  "mGattCharacteristics == null" \
+  "groupPosition < 0" \
+  "groupPosition >= mGattCharacteristics.size()" \
+  "ArrayList<BluetoothGattCharacteristic> characteristics" \
+  "characteristics == null" \
+  "childPosition < 0" \
+  "childPosition >= characteristics.size()" \
+  "characteristics.get(childPosition)" \
+  "if (characteristic == null)"; do
+  if ! printf '%s\n' "$GATT_SELECTION_CALLBACK" | grep -Fq "$selection_contract"; then
+    printf '%s\n' "GATT child selection must keep guard: $selection_contract" >&2
+    exit 1
+  fi
+done
+
+if printf '%s\n' "$GATT_SELECTION_CALLBACK" | \
+    grep -Fq "mGattCharacteristics.get(groupPosition).get(childPosition)"; then
+  printf '%s\n' "GATT child selection must not use unchecked nested indexing." >&2
+  exit 1
+fi
+
+if [ ! -f "$GATT_SELECTION_PLAN" ] || \
+   ! grep -Fq "Status: Completed" "$GATT_SELECTION_PLAN" || \
+   ! grep -Fq "make check" "$GATT_SELECTION_PLAN" || \
+   ! grep -Fq "hostile mutations" "$GATT_SELECTION_PLAN"; then
+  printf '%s\n' "HRM GATT selection plan must record completed verification." >&2
+  exit 1
+fi
+
+for selection_doc in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! tr '\n' ' ' < "$selection_doc" | tr -s '[:space:]' ' ' | \
+      grep -Fiq "stale GATT selection"; then
+    printf '%s\n' "$selection_doc must document stale GATT selection guards." >&2
+    exit 1
+  fi
+done
 if ! grep -Fq "make check" "$ROOT_DIR/docs/plans/2026-06-09-hrm-broadcast-privacy.md"; then
   printf '%s\n' "HRM broadcast privacy plan must document make check verification." >&2
   exit 1

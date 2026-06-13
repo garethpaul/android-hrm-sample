@@ -2,6 +2,8 @@
 
 ## 2026-06-13
 
+- Guarded stale GATT selection callbacks against unavailable services, missing
+  entries, and out-of-range group or child positions.
 - Added an explicit HRM component export boundary: the launcher remains
   exported while the device-control activity and BLE service are app-internal.
 

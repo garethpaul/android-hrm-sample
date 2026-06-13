@@ -107,6 +107,8 @@ still requires a compatible device or emulator.
   not crash disconnect or data-available paths.
 - GATT characteristic operations guard missing characteristics before read,
   notification, or data-broadcast parsing work.
+- Stale GATT selection callbacks reject missing services, groups,
+  characteristics, and out-of-range positions before BLE operations.
 - GATT connection callbacks ignore stale instances, reject failed status
   transitions, and start discovery through the active callback object.
 - GATT service, read, and notification callbacks reject stale GATT instances
@@ -156,6 +158,8 @@ still requires a compatible device or emulator.
   hosted Android lint, check, and build gate.
 - See `docs/plans/2026-06-12-hrm-data-callback-ownership.md` for complete GATT
   data callback ownership guards.
+- See `docs/plans/2026-06-13-hrm-gatt-selection-guards.md` for stale GATT
+  selection callback guards.
 
 ## Contributing
 
