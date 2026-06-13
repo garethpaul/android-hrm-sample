@@ -94,6 +94,8 @@ still requires a compatible device or emulator.
 - Heart-rate notification descriptor writes occur only after local notification
   registration succeeds, remain null-guarded, and use the matching enable or
   disable descriptor value.
+- Heart-rate descriptor-phase failures roll back local notification state to
+  preserve consistency when descriptor setup or write queueing is rejected.
 - GATT broadcasts are package-scoped before delivery, and exact heart-rate
   values are not written to debug logs.
 - The explicit HRM component export boundary exposes only the launcher

@@ -1,6 +1,6 @@
 # HRM Descriptor Write Rollback
 
-Status: Planned
+Status: Completed
 
 ## Context
 
@@ -42,7 +42,7 @@ prior-state restoration, generic logs, ordering, and completed plan evidence.
 
 ### U3: Document And Verify
 
-**Files:** `AGENTS.md`, `README.md`, `SECURITY.md`, `VISION.md`, `CHANGES.md`, this plan
+**Files:** `README.md`, `SECURITY.md`, `VISION.md`, `CHANGES.md`, this plan
 
 Document local/remote notification consistency. Run local and external
 `make check`, hostile mutations, available Android verification, and final
@@ -78,4 +78,17 @@ diff, artifact, credential, and exact-head hosted checks.
 
 ## Verification
 
-- Pending implementation.
+- Local and external-working-directory `make check` passed all SDK-free BLE
+  result, rollback ordering, generic-log, documentation, and repository
+  contracts.
+- Nine focused hostile mutations were rejected across missing-descriptor
+  rollback, ignored or inverted value/write results, wrong rollback state,
+  unreachable rollback, reflected diagnostics, guidance, and completed-plan
+  status.
+- No Android SDK is configured locally, so Android lint, Gradle check, Java
+  compilation, and debug assembly were truthfully skipped and remain required
+  in hosted CI.
+- Final diff, artifact, conflict-marker, credential-pattern, and whitespace
+  inspection passed. Emulator, physical BLE device, and forced descriptor
+  failure behavior were not exercised.
+- Hosted exact-head evidence remains pending push.
