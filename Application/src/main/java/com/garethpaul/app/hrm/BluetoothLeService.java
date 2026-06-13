@@ -336,7 +336,13 @@ public class BluetoothLeService extends Service {
             Log.w(TAG, "BluetoothAdapter not initialized or characteristic unavailable.");
             return;
         }
-        mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
+        boolean notificationSet = mBluetoothGatt.setCharacteristicNotification(
+                characteristic,
+                enabled);
+        if (!notificationSet) {
+            Log.w(TAG, "Unable to set local GATT notification state.");
+            return;
+        }
 
         // This is specific to Heart Rate Measurement.
         if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {

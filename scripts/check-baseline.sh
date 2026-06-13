@@ -15,6 +15,7 @@ CODEOWNERS="$ROOT_DIR/.github/CODEOWNERS"
 DATA_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hrm-data-callback-ownership.md"
 COMPONENT_EXPORT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-component-export-boundary.md"
 GATT_SELECTION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-gatt-selection-guards.md"
+NOTIFICATION_REGISTRATION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-notification-registration-guard.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
 WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
@@ -153,6 +154,27 @@ for pattern in \
     exit 1
   fi
 done
+
+NOTIFICATION_METHOD=$(sed -n \
+  '/public void setCharacteristicNotification/,/^    }/p' \
+  "$BLE_SERVICE")
+NOTIFICATION_COMPACT=$(printf '%s\n' "$NOTIFICATION_METHOD" | tr -d '[:space:]')
+NOTIFICATION_BEFORE_DESCRIPTOR=${NOTIFICATION_COMPACT%%BluetoothGattDescriptordescriptor=*}
+
+for notification_registration_contract in \
+  'booleannotificationSet=mBluetoothGatt.setCharacteristicNotification(characteristic,enabled);' \
+  'if(!notificationSet){Log.w(TAG,"UnabletosetlocalGATTnotificationstate.");return;}'; do
+  if ! printf '%s\n' "$NOTIFICATION_BEFORE_DESCRIPTOR" | \
+      grep -Fq "$notification_registration_contract"; then
+    printf '%s\n' "GATT notification registration must keep pre-descriptor contract: $notification_registration_contract" >&2
+    exit 1
+  fi
+done
+
+if [ "$NOTIFICATION_BEFORE_DESCRIPTOR" = "$NOTIFICATION_COMPACT" ]; then
+  printf '%s\n' "GATT notification registration guard must precede descriptor lookup." >&2
+  exit 1
+fi
 
 for pattern in \
   "private void configureActionBar()" \
@@ -630,6 +652,25 @@ for selection_doc in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHAN
   if ! tr '\n' ' ' < "$selection_doc" | tr -s '[:space:]' ' ' | \
       grep -Fiq "stale GATT selection"; then
     printf '%s\n' "$selection_doc must document stale GATT selection guards." >&2
+    exit 1
+  fi
+done
+
+if [ ! -f "$NOTIFICATION_REGISTRATION_PLAN" ] || \
+   ! grep -Fq "Status: Completed" "$NOTIFICATION_REGISTRATION_PLAN" || \
+   ! grep -Fq "## Verification Completed" "$NOTIFICATION_REGISTRATION_PLAN" || \
+   ! grep -Fq "make check" "$NOTIFICATION_REGISTRATION_PLAN" || \
+   ! grep -Fq "Six focused hostile mutations" "$NOTIFICATION_REGISTRATION_PLAN" || \
+   ! grep -Fq "generated-artifact and credential-shaped" "$NOTIFICATION_REGISTRATION_PLAN"; then
+  printf '%s\n' "HRM notification registration plan must record completed verification." >&2
+  exit 1
+fi
+
+for notification_doc in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  normalized_notification_doc=$(tr '\n' ' ' < "$notification_doc" | tr -s '[:space:]' ' ')
+  if ! printf '%s\n' "$normalized_notification_doc" | grep -Fiq "notification registration" || \
+     ! printf '%s\n' "$normalized_notification_doc" | grep -Fiq "descriptor"; then
+    printf '%s\n' "$notification_doc must document notification registration descriptor gating." >&2
     exit 1
   fi
 done

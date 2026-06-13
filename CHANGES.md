@@ -2,6 +2,8 @@
 
 ## 2026-06-13
 
+- Gated heart-rate client configuration descriptor writes on successful local
+  notification registration.
 - Guarded stale GATT selection callbacks against unavailable services, missing
   entries, and out-of-range group or child positions.
 - Added an explicit HRM component export boundary: the launcher remains

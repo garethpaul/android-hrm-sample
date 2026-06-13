@@ -28,6 +28,7 @@ Priority:
 - Parse heart-rate format flags from measurement data and reject truncated
   packets safely
 - Keep heart-rate notification descriptor writes null-safe and reversible
+- Keep descriptor writes gated on successful local notification registration
 - Keep heart-rate and GATT update delivery scoped to the app process boundary
 - Keep GATT characteristic operations safe when callbacks or callers omit data
 - Keep stale GATT selection callbacks from indexing replaced characteristic

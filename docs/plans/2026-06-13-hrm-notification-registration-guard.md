@@ -1,6 +1,6 @@
 # Gate Heart-Rate Descriptor Writes On Local Registration
 
-Status: Planned
+Status: Completed
 
 ## Context
 
@@ -37,3 +37,25 @@ descriptor after a failed local registration request.
 - Android `BluetoothGatt.setCharacteristicNotification` API reference: the
   boolean result is true only when the requested notification status was set
   successfully.
+
+## Work Completed
+
+- Captured the local notification registration result.
+- Logged a generic failure and returned before heart-rate descriptor lookup,
+  value mutation, or write initiation when registration failed.
+- Preserved characteristic/GATT null guards, UUID matching, descriptor null
+  handling, and enable/disable values.
+- Added method-local ordering, documentation, and completed-plan contracts.
+
+## Verification Completed
+
+- `make check` and external-working-directory baseline execution passed.
+- Gradle lint, check, and build truthfully skipped because no Android SDK is
+  configured on this host.
+- `sh -n scripts/check-baseline.sh` and `git diff --check` passed.
+- Six focused hostile mutations were rejected: removed result handling,
+  inverted condition, late guard, missing return, stale plan status, and
+  missing verification evidence.
+- Exact-base generated-artifact and credential-shaped added-line scans passed.
+- Hosted Android validation is recorded separately after push; this plan claims
+  only the completed local SDK-free verification.
