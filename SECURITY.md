@@ -16,6 +16,10 @@ Do not open a public issue that includes exploit code, secrets, personal data, o
 
 Helpful reports include:
 
+- Replacement GATT connections close the previously owned GATT before the new
+  object becomes authoritative, while failed replacement creation preserves
+  current ownership.
+
 - the affected file, endpoint, permission, dependency, or workflow
 - a concise impact statement explaining what an attacker could do
 - reproduction steps using test data and accounts you control

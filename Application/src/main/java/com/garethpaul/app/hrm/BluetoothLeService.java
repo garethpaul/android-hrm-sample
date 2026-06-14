@@ -299,10 +299,15 @@ public class BluetoothLeService extends Service {
         }
         // We want to directly connect to the device, so we are setting the autoConnect
         // parameter to false.
+        BluetoothGatt previousGatt = mBluetoothGatt;
         BluetoothGatt bluetoothGatt = device.connectGatt(this, false, mGattCallback);
         if (bluetoothGatt == null) {
             Log.w(TAG, "Unable to create a GATT connection.");
             return false;
+        }
+        clearPendingDescriptorWrite();
+        if (previousGatt != null) {
+            previousGatt.close();
         }
         mBluetoothGatt = bluetoothGatt;
         Log.d(TAG, "Trying to create a new connection.");

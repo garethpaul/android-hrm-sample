@@ -2,6 +2,11 @@
 
 ## 2026-06-14
 
+- Replacement GATT connections close the previously owned GATT after successful
+  replacement creation and before publishing the new connection.
+
+## 2026-06-14
+
 - Tracked queued heart-rate descriptor writes and ignored stale or unrelated
   completion callbacks.
 - Made asynchronous descriptor write failures roll back local notification
