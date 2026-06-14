@@ -21,6 +21,7 @@ DESCRIPTOR_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-descriptor-callbac
 REPLACEMENT_GATT_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-replacement-gatt-cleanup.md"
 DEVICE_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-device-verification-checklist.md"
 LOCAL_BROADCAST_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-local-broadcast-boundary.md"
+INITIALIZE_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-initialize-failure-return.md"
 SERVICE_AVAILABILITY_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-service-availability.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
@@ -33,9 +34,43 @@ WRAPPER_PROPERTIES="$ROOT_DIR/gradle/wrapper/gradle-wrapper.properties"
 for required_path in \
   "$ROOT_DIR/DEVICE_VERIFICATION.md" \
   "$DEVICE_VERIFICATION_PLAN" \
-  "$LOCAL_BROADCAST_PLAN"; do
+  "$LOCAL_BROADCAST_PLAN" \
+  "$INITIALIZE_FAILURE_PLAN"; do
   if [ ! -f "$required_path" ]; then
     printf '%s\n' "Required file is missing: ${required_path#"$ROOT_DIR/"}" >&2
+    exit 1
+  fi
+done
+
+if ! awk '
+  /public void onServiceConnected\(ComponentName componentName, IBinder service\)/ { in_callback = 1 }
+  in_callback && /if \(!mBluetoothLeService\.initialize\(\)\)/ { failure = NR }
+  in_callback && /finish\(\);/ { finish = NR }
+  in_callback && finish && /return;/ { failure_return = NR }
+  in_callback && /mBluetoothLeService\.connect\(mDeviceAddress\);/ {
+    connect = NR
+    done = 1
+    exit !(failure && finish && failure_return &&
+      failure < finish && finish < failure_return && failure_return < connect)
+  }
+  END {
+    if (!done) exit 1
+  }
+' "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "Failed Bluetooth initialization must return before GATT connection." >&2
+  exit 1
+fi
+
+for initialize_failure_document in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! grep -Fq "failed Bluetooth initialization" "$initialize_failure_document"; then
+    printf '%s\n' "$initialize_failure_document must document failed initialization termination." >&2
+    exit 1
+  fi
+done
+
+for initialize_failure_plan_contract in "Status: Completed" "make check" "mutations"; do
+  if ! grep -Fqi "$initialize_failure_plan_contract" "$INITIALIZE_FAILURE_PLAN"; then
+    printf '%s\n' "HRM initialization failure plan must preserve completion evidence: $initialize_failure_plan_contract" >&2
     exit 1
   fi
 done
