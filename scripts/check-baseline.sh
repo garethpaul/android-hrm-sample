@@ -18,6 +18,7 @@ GATT_SELECTION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-gatt-selection-guards.m
 NOTIFICATION_REGISTRATION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-notification-registration-guard.md"
 DESCRIPTOR_ROLLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-descriptor-write-rollback.md"
 DESCRIPTOR_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-descriptor-callback-rollback.md"
+REPLACEMENT_GATT_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-replacement-gatt-cleanup.md"
 SERVICE_AVAILABILITY_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-service-availability.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
@@ -245,8 +246,8 @@ for clear_descriptor_contract in \
     exit 1
   fi
 done
-if [ "$(grep -Fc 'clearPendingDescriptorWrite();' "$BLE_SERVICE")" -ne 5 ]; then
-  printf '%s\n' "GATT descriptor pending state must clear on completion, queue failure, disconnect, and close." >&2
+if [ "$(grep -Fc 'clearPendingDescriptorWrite();' "$BLE_SERVICE")" -ne 6 ]; then
+  printf '%s\n' "GATT descriptor pending state must clear on completion, queue failure, disconnect, replacement, and close." >&2
   exit 1
 fi
 for rollback_helper_contract in \
@@ -912,6 +913,46 @@ if [ ! -f "$SERVICE_AVAILABILITY_PLAN" ] || \
   printf '%s\n' "HRM service availability plan must record completed verification." >&2
   exit 1
 fi
+
+if ! awk '
+  /public boolean connect\(final String address\)/ { in_connect = 1 }
+  in_connect && /BluetoothGatt previousGatt = mBluetoothGatt;/ { capture = NR }
+  in_connect && /BluetoothGatt bluetoothGatt = device\.connectGatt/ { create = NR }
+  in_connect && /if \(bluetoothGatt == null\)/ { create_guard = NR }
+  in_connect && /clearPendingDescriptorWrite\(\);/ { clear_pending = NR }
+  in_connect && /if \(previousGatt != null\)/ { previous_guard = NR }
+  in_connect && /previousGatt\.close\(\);/ { previous_close = NR }
+  in_connect && /mBluetoothGatt = bluetoothGatt;/ { publish = NR }
+  in_connect && capture && /return true;/ {
+    completed = 1
+    exit !(capture && create && create_guard && clear_pending && previous_guard && previous_close && publish &&
+      capture < create && create < create_guard && create_guard < clear_pending &&
+      clear_pending < previous_guard && previous_guard < previous_close && previous_close < publish)
+  }
+  END { if (!completed) exit 1 }
+' "$BLE_SERVICE"; then
+  printf '%s\n' "Replacement GATT creation must preserve failures and close prior ownership before publication." >&2
+  exit 1
+fi
+if [ "$(grep -Fc 'previousGatt.close();' "$BLE_SERVICE")" -ne 1 ]; then
+  printf '%s\n' "Replacement GATT cleanup must close prior ownership exactly once." >&2
+  exit 1
+fi
+
+if [ ! -f "$REPLACEMENT_GATT_PLAN" ] || \
+   ! grep -Fq "Status: Completed" "$REPLACEMENT_GATT_PLAN" || \
+   ! grep -Fq "make check" "$REPLACEMENT_GATT_PLAN" || \
+   ! grep -Fq "hostile mutations" "$REPLACEMENT_GATT_PLAN"; then
+  printf '%s\n' "Replacement GATT cleanup plan must record completed verification." >&2
+  exit 1
+fi
+
+for replacement_doc in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! grep -Fq "Replacement GATT connections close the previously owned GATT" "$replacement_doc"; then
+    printf '%s\n' "$replacement_doc must document replacement GATT ownership cleanup." >&2
+    exit 1
+  fi
+done
 
 for service_doc in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
   if ! tr '\n' ' ' < "$service_doc" | tr -s '[:space:]' ' ' | \

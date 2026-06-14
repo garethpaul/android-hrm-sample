@@ -1,6 +1,6 @@
 # HRM Replacement GATT Cleanup
 
-Status: Planned
+Status: Completed
 
 ## Problem
 
@@ -22,10 +22,15 @@ later callbacks, yet the old connection resource remains open.
 
 ## Verification
 
-- Run the portable checker and bounded Java 8/API 18 Android `make check`.
-- Reject mutations for missing prior capture, early close, missing pending
-  clear, missing close, assignment-before-close, and stale plan evidence.
-- Audit the exact diff, generated artifacts, whitespace, and added credentials.
+- The portable checker and bounded Java 8/API 18 Android `make check` passed,
+  including zero-issue lint, debug/release compilation and checks, and debug
+  APK assembly.
+- Six hostile mutations were rejected: missing prior capture, close before
+  replacement creation, missing pending clear, missing close, publication
+  before close, and stale plan evidence.
+- Exact-diff, generated-artifact, whitespace, conflict-marker, and added-line
+  credential audits complete the final gate.
+- Physical BLE replacement behavior was not exercised.
 
 ## Scope Boundaries
 

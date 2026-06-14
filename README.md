@@ -119,6 +119,8 @@ still requires a compatible device or emulator.
   unavailable.
 - GATT connection callbacks ignore stale instances, reject failed status
   transitions, and start discovery through the active callback object.
+- Replacement GATT connections close the previously owned GATT only after a
+  new platform connection object is created successfully.
 - GATT service, read, and notification callbacks reject stale GATT instances
   before publishing discovered services or sensor data.
 - Heart-rate parsing reads the format flag from measurement byte zero and
