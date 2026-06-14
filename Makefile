@@ -2,7 +2,7 @@
 
 ANDROID_HOME ?=
 ANDROID_SDK_ROOT ?=
-ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+override ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 ANDROID_SDK := $(if $(ANDROID_HOME),$(ANDROID_HOME),$(ANDROID_SDK_ROOT))
 GRADLE ?= $(ROOT)gradlew
 
