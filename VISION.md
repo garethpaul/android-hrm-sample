@@ -46,6 +46,8 @@ Priority:
 - Keep GitHub Actions running the root `make check` baseline
 - Keep the legacy Gradle runtime behind a checksum-verified generated wrapper
 - Avoid changing BLE behavior without device or emulator verification notes
+- Keep exact-commit BLE hardware evidence separate from portable contracts,
+  with unexecuted sensor and timing scenarios recorded explicitly
 
 Next priorities:
 
@@ -55,6 +57,8 @@ Next priorities:
   together in a dedicated compatibility pass; wrapper hardening is separate
 - Add tests around characteristic parsing and activity/service interaction
 - Document manual BLE device verification steps
+- Execute the HRM device verification matrix with an authorized sensor and
+  privacy-safe evidence
 
 Contribution rules:
 

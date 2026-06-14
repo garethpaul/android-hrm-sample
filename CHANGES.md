@@ -4,6 +4,9 @@
 
 - Replacement GATT connections close the previously owned GATT after successful
   replacement creation and before publishing the new connection.
+- Added an exact-commit HRM device verification matrix for scan, GATT ownership,
+  notifications, descriptor rollback, measurements, lifecycle races, and
+  privacy-safe evidence, with every runtime row explicitly unexecuted.
 
 ## 2026-06-14
 

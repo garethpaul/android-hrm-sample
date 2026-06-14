@@ -87,6 +87,11 @@ The legacy plugin uses its non-queued PNG cruncher because the concurrent
 cruncher can fail nondeterministically on clean hosted builds. BLE behavior
 still requires a compatible device or emulator.
 
+Use [`DEVICE_VERIFICATION.md`](DEVICE_VERIFICATION.md) for the exact-commit BLE
+sensor matrix. It covers scan/connect, service discovery, notification and
+descriptor rollback, heart-rate packets, lifecycle races, privacy-safe
+evidence, and explicit unexecuted rows.
+
 ## Configuration and Secrets
 
 - No required secret or credential file was identified in the repository scan. If you add integrations later, keep secrets out of git.
@@ -136,6 +141,9 @@ still requires a compatible device or emulator.
 - Review changes touching database, model, or persistence code; examples from the scan include docs/plans/2026-06-08-hrm-build-baseline.md.
 
 ## Maintenance Notes
+
+- See `docs/plans/2026-06-14-hrm-device-verification-checklist.md` for the BLE
+  hardware evidence matrix and runtime non-claims.
 
 - This looks like a legacy Android project or sample. Expect Android SDK, Gradle, and support-library versions to matter.
 - The current baseline keeps Gradle 2.2.1, Android Gradle Plugin 1.0.0, compile SDK 22, target SDK 22, and Android build-tools 24.0.3.
