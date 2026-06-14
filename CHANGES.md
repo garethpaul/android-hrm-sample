@@ -1,5 +1,12 @@
 # Changes
 
+## 2026-06-14
+
+- Tracked queued heart-rate descriptor writes and ignored stale or unrelated
+  completion callbacks.
+- Made asynchronous descriptor write failures roll back local notification
+  state after clearing the completed pending operation.
+
 ## 2026-06-13
 
 - Recorded Bluetooth service binding ownership, handled rejected binds, and

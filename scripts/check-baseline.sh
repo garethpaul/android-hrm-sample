@@ -17,6 +17,7 @@ COMPONENT_EXPORT_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-component-export-boun
 GATT_SELECTION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-gatt-selection-guards.md"
 NOTIFICATION_REGISTRATION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-notification-registration-guard.md"
 DESCRIPTOR_ROLLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-descriptor-write-rollback.md"
+DESCRIPTOR_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-descriptor-callback-rollback.md"
 SERVICE_AVAILABILITY_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-service-availability.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
@@ -161,7 +162,9 @@ NOTIFICATION_METHOD=$(sed -n \
   '/public void setCharacteristicNotification/,/^    }/p' \
   "$BLE_SERVICE")
 NOTIFICATION_COMPACT=$(printf '%s\n' "$NOTIFICATION_METHOD" | tr -d '[:space:]')
+NOTIFICATION_BEFORE_REGISTRATION=${NOTIFICATION_COMPACT%%booleannotificationSet=*}
 NOTIFICATION_BEFORE_DESCRIPTOR=${NOTIFICATION_COMPACT%%BluetoothGattDescriptordescriptor=*}
+NOTIFICATION_BEFORE_VALUE=${NOTIFICATION_COMPACT%%byte[]descriptorValue=*}
 
 for notification_registration_contract in \
   'booleannotificationSet=mBluetoothGatt.setCharacteristicNotification(characteristic,enabled);' \
@@ -173,6 +176,16 @@ for notification_registration_contract in \
   fi
 done
 
+if ! printf '%s\n' "$NOTIFICATION_BEFORE_REGISTRATION" | grep -Fq \
+    'booleanheartRateMeasurement=UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid());if(heartRateMeasurement&&mPendingDescriptorWrite!=null){Log.w(TAG,"Heartratenotificationdescriptorwriteisalreadypending.");return;}'; then
+  printf '%s\n' "GATT pending descriptor guard must precede local notification mutation." >&2
+  exit 1
+fi
+if [ "$NOTIFICATION_BEFORE_VALUE" = "$NOTIFICATION_COMPACT" ]; then
+  printf '%s\n' "GATT pending descriptor guard must precede descriptor value assignment." >&2
+  exit 1
+fi
+
 if [ "$NOTIFICATION_BEFORE_DESCRIPTOR" = "$NOTIFICATION_COMPACT" ]; then
   printf '%s\n' "GATT notification registration guard must precede descriptor lookup." >&2
   exit 1
@@ -182,15 +195,60 @@ ROLLBACK_METHOD=$(sed -n \
   '/private void rollbackCharacteristicNotification/,/^    }/p' \
   "$BLE_SERVICE")
 ROLLBACK_COMPACT=$(printf '%s\n' "$ROLLBACK_METHOD" | tr -d '[:space:]')
+DESCRIPTOR_CALLBACK=$(sed -n \
+  '/public void onDescriptorWrite/,/^        }/p' \
+  "$BLE_SERVICE")
+DESCRIPTOR_CALLBACK_COMPACT=$(printf '%s\n' "$DESCRIPTOR_CALLBACK" | tr -d '[:space:]')
+CLEAR_DESCRIPTOR_METHOD=$(sed -n \
+  '/private void clearPendingDescriptorWrite/,/^    }/p' \
+  "$BLE_SERVICE")
+CLEAR_DESCRIPTOR_COMPACT=$(printf '%s\n' "$CLEAR_DESCRIPTOR_METHOD" | tr -d '[:space:]')
 for descriptor_rollback_contract in \
   'if(descriptor==null){Log.w(TAG,"Heartratenotificationdescriptorismissing.");rollbackCharacteristicNotification(characteristic,enabled);return;}' \
   'booleandescriptorValueSet=descriptor.setValue(descriptorValue);if(!descriptorValueSet){Log.w(TAG,"Unabletosetheartratenotificationdescriptorvalue.");rollbackCharacteristicNotification(characteristic,enabled);return;}' \
-  'booleandescriptorWriteQueued=mBluetoothGatt.writeDescriptor(descriptor);if(!descriptorWriteQueued){Log.w(TAG,"Unabletoqueueheartratenotificationdescriptorwrite.");rollbackCharacteristicNotification(characteristic,enabled);}' ; do
+  'booleandescriptorWriteQueued=mBluetoothGatt.writeDescriptor(descriptor);if(!descriptorWriteQueued){Log.w(TAG,"Unabletoqueueheartratenotificationdescriptorwrite.");clearPendingDescriptorWrite();rollbackCharacteristicNotification(characteristic,enabled);}' ; do
   if ! printf '%s\n' "$NOTIFICATION_COMPACT" | grep -Fq "$descriptor_rollback_contract"; then
     printf '%s\n' "GATT descriptor failure must keep rollback contract: $descriptor_rollback_contract" >&2
     exit 1
   fi
 done
+
+for pending_descriptor_contract in \
+  'privateBluetoothGattDescriptormPendingDescriptorWrite;' \
+  'privateBluetoothGattCharacteristicmPendingNotificationCharacteristic;' \
+  'privatebooleanmPendingNotificationEnabled;' \
+  'if(heartRateMeasurement&&mPendingDescriptorWrite!=null){Log.w(TAG,"Heartratenotificationdescriptorwriteisalreadypending.");return;}' \
+  'mPendingDescriptorWrite=descriptor;mPendingNotificationCharacteristic=characteristic;mPendingNotificationEnabled=enabled;booleandescriptorWriteQueued=mBluetoothGatt.writeDescriptor(descriptor);'; do
+  if ! printf '%s\n' "$(tr -d '[:space:]' < "$BLE_SERVICE")" | grep -Fq "$pending_descriptor_contract"; then
+    printf '%s\n' "GATT descriptor queue must keep pending-operation contract: $pending_descriptor_contract" >&2
+    exit 1
+  fi
+done
+
+for descriptor_callback_contract in \
+  'if(gatt==null||gatt!=mBluetoothGatt){Log.w(TAG,"IgnoringstaleGATTdescriptorcallback.");return;}' \
+  'if(descriptor==null||descriptor!=mPendingDescriptorWrite){Log.w(TAG,"IgnoringunrelatedGATTdescriptorcallback.");return;}' \
+  'BluetoothGattCharacteristiccharacteristic=mPendingNotificationCharacteristic;booleanenabled=mPendingNotificationEnabled;clearPendingDescriptorWrite();if(status!=BluetoothGatt.GATT_SUCCESS&&characteristic!=null){Log.w(TAG,"Heartratenotificationdescriptorwritefailed.");rollbackCharacteristicNotification(characteristic,enabled);}' ; do
+  if ! printf '%s\n' "$DESCRIPTOR_CALLBACK_COMPACT" | grep -Fq "$descriptor_callback_contract"; then
+    printf '%s\n' "GATT descriptor callback must keep ownership and rollback contract: $descriptor_callback_contract" >&2
+    exit 1
+  fi
+done
+
+for clear_descriptor_contract in \
+  'privatevoidclearPendingDescriptorWrite()' \
+  'mPendingDescriptorWrite=null;' \
+  'mPendingNotificationCharacteristic=null;' \
+  'mPendingNotificationEnabled=false;'; do
+  if ! printf '%s\n' "$CLEAR_DESCRIPTOR_COMPACT" | grep -Fq "$clear_descriptor_contract"; then
+    printf '%s\n' "GATT descriptor pending-state cleanup must keep contract: $clear_descriptor_contract" >&2
+    exit 1
+  fi
+done
+if [ "$(grep -Fc 'clearPendingDescriptorWrite();' "$BLE_SERVICE")" -ne 5 ]; then
+  printf '%s\n' "GATT descriptor pending state must clear on completion, queue failure, disconnect, and close." >&2
+  exit 1
+fi
 for rollback_helper_contract in \
   'privatevoidrollbackCharacteristicNotification(BluetoothGattCharacteristiccharacteristic,booleanenabled)' \
   'booleanrollbackSet=mBluetoothGatt.setCharacteristicNotification(characteristic,!enabled);' \
@@ -203,6 +261,7 @@ done
 for reflected_descriptor_log in \
   '"Unable to set heart rate notification descriptor value." +' \
   '"Unable to queue heart rate notification descriptor write." +' \
+  '"Heart rate notification descriptor write failed." +' \
   '"Unable to roll back local GATT notification state." +'; do
   if grep -Fq "$reflected_descriptor_log" "$BLE_SERVICE"; then
     printf '%s\n' "GATT descriptor rollback logs must remain generic." >&2
@@ -738,6 +797,21 @@ if [ ! -f "$DESCRIPTOR_ROLLBACK_PLAN" ] || \
   printf '%s\n' "HRM descriptor rollback plan must record completed verification." >&2
   exit 1
 fi
+
+if [ ! -f "$DESCRIPTOR_CALLBACK_PLAN" ] || \
+   ! grep -Fq "Status: Completed" "$DESCRIPTOR_CALLBACK_PLAN" || \
+   ! grep -Fq "make check" "$DESCRIPTOR_CALLBACK_PLAN" || \
+   ! grep -Fq "focused mutations" "$DESCRIPTOR_CALLBACK_PLAN"; then
+  printf '%s\n' "HRM descriptor callback rollback plan must record completed verification." >&2
+  exit 1
+fi
+for callback_doc in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! tr '\n' ' ' < "$callback_doc" | tr -s '[:space:]' ' ' | \
+      grep -Fiq "asynchronous descriptor write failures roll back local notification state"; then
+    printf '%s\n' "$callback_doc must document asynchronous descriptor callback rollback." >&2
+    exit 1
+  fi
+done
 for rollback_doc in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
   if ! tr '\n' ' ' < "$rollback_doc" | tr -s '[:space:]' ' ' | \
       grep -Fiq "descriptor-phase failures roll back local notification state"; then
