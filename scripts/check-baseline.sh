@@ -19,6 +19,7 @@ NOTIFICATION_REGISTRATION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-notification
 DESCRIPTOR_ROLLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-descriptor-write-rollback.md"
 DESCRIPTOR_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-descriptor-callback-rollback.md"
 REPLACEMENT_GATT_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-replacement-gatt-cleanup.md"
+DEVICE_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-device-verification-checklist.md"
 SERVICE_AVAILABILITY_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-service-availability.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
@@ -27,6 +28,51 @@ GRADLEW="$ROOT_DIR/gradlew"
 GRADLEW_BAT="$ROOT_DIR/gradlew.bat"
 WRAPPER_JAR="$ROOT_DIR/gradle/wrapper/gradle-wrapper.jar"
 WRAPPER_PROPERTIES="$ROOT_DIR/gradle/wrapper/gradle-wrapper.properties"
+
+for required_path in \
+  "$ROOT_DIR/DEVICE_VERIFICATION.md" \
+  "$DEVICE_VERIFICATION_PLAN"; do
+  if [ ! -f "$required_path" ]; then
+    printf '%s\n' "Required file is missing: ${required_path#"$ROOT_DIR/"}" >&2
+    exit 1
+  fi
+done
+
+for device_contract in \
+  'commit SHA and pull request' \
+  'Scan timeout' \
+  'Replacement sensor' \
+  'Local registration failure' \
+  'Descriptor callback failure' \
+  'Rapid disconnect/reconnect' \
+  'Do not convert `not run` into passing evidence.' \
+  'Bluetooth addresses, names, advertising' \
+  'every BLE device and heart-rate row as' \
+  'unexecuted'; do
+  if ! grep -Fq "$device_contract" "$ROOT_DIR/DEVICE_VERIFICATION.md"; then
+    printf '%s\n' "HRM device checklist must keep contract: $device_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq 'DEVICE_VERIFICATION.md' "$README" || \
+   ! grep -Fq 'explicit unexecuted rows' "$README" || \
+   ! grep -Fqi 'HRM device verification matrix' "$ROOT_DIR/VISION.md" || \
+   ! grep -Fq 'every runtime row explicitly unexecuted' "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' 'Repository guidance must document the unexecuted HRM device matrix.' >&2
+  exit 1
+fi
+
+for plan_contract in \
+  'Status: Completed' \
+  'make check' \
+  'hostile mutations' \
+  'No Android SDK, emulator, phone, BLE sensor, or live GATT scenario was executed'; do
+  if ! grep -Fq "$plan_contract" "$DEVICE_VERIFICATION_PLAN"; then
+    printf '%s\n' "HRM device plan must keep completion evidence: $plan_contract" >&2
+    exit 1
+  fi
+done
 
 sha256_file() {
   if command -v sha256sum >/dev/null 2>&1; then

@@ -1,6 +1,6 @@
 # HRM Device Verification Checklist
 
-Status: In Progress
+Status: Completed
 
 ## Problem
 
@@ -25,4 +25,9 @@ checklist defines compatible heart-rate sensor evidence.
 
 ## Verification
 
-- Pending implementation and bounded repository validation.
+- `sh -n scripts/check-baseline.sh` and the focused baseline checker passed.
+- `make check` passed from the repository and from an external working
+  directory for all portable contracts available in this Linux environment.
+- Twelve hostile mutations were rejected by the checklist's static contracts.
+- No Android SDK, emulator, phone, BLE sensor, or live GATT scenario was executed;
+  every hardware-dependent matrix row remains `not run`.
