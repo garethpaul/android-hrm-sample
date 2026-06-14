@@ -1,6 +1,6 @@
 # HRM Local Broadcast Boundary
 
-Status: Planned
+Status: Completed
 
 ## Problem
 
@@ -59,13 +59,16 @@ for GATT events, and document the process-local trust boundary.
 
 ## Verification
 
-To be recorded after implementation:
-
-- POSIX shell syntax and portable source contracts.
-- Java 8 / Android API 22 lint, checks, and debug assembly.
-- Repository-root and external-directory `make check`.
-- Isolated publication, registration, unregistration, framework-API,
-  documentation, and completed-plan mutations.
+- `sh -n scripts/check-baseline.sh` and the portable source contracts passed.
+- With Amazon Corretto 8 and the Android API 22 SDK,
+  `./gradlew lint check assembleDebug --no-daemon` passed debug/release
+  compilation, zero-issue lint, Gradle checks, and debug APK assembly.
+- Repository-root `make check` passed with the API 22 SDK configured, and an
+  external-directory invocation passed with SDK variables unset to exercise
+  the location-independent portable path.
+- Eight isolated mutations were rejected for local publication, publication
+  coverage, local registration, local unregistration, framework API use,
+  documentation, and completed plan evidence.
 
 ## Scope Boundaries
 

@@ -87,6 +87,10 @@ The legacy plugin uses its non-queued PNG cruncher because the concurrent
 cruncher can fail nondeterministically on clean hosted builds. BLE behavior
 still requires a compatible device or emulator.
 
+GATT connection and measurement events use an in-process local broadcast
+channel, so other applications cannot publish spoofed state or heart-rate
+updates to the control activity or observe those event payloads.
+
 Use [`DEVICE_VERIFICATION.md`](DEVICE_VERIFICATION.md) for the exact-commit BLE
 sensor matrix. It covers scan/connect, service discovery, notification and
 descriptor rollback, heart-rate packets, lifecycle races, privacy-safe

@@ -38,6 +38,7 @@ Priority:
 - Keep Bluetooth service binding ownership explicit and guard activity actions
   until the bound service is available
 - Keep GATT connection state scoped to the currently owned callback instance
+- Keep GATT state and heart-rate events on an in-process local broadcast channel
 - Replacement GATT connections close the previously owned GATT before
   publishing new connection ownership
 - Keep scan and control activity startup safe when legacy ActionBar presentation

@@ -20,6 +20,7 @@ DESCRIPTOR_ROLLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-descriptor-write-r
 DESCRIPTOR_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-descriptor-callback-rollback.md"
 REPLACEMENT_GATT_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-replacement-gatt-cleanup.md"
 DEVICE_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-device-verification-checklist.md"
+LOCAL_BROADCAST_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-local-broadcast-boundary.md"
 SERVICE_AVAILABILITY_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-service-availability.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
@@ -31,7 +32,8 @@ WRAPPER_PROPERTIES="$ROOT_DIR/gradle/wrapper/gradle-wrapper.properties"
 
 for required_path in \
   "$ROOT_DIR/DEVICE_VERIFICATION.md" \
-  "$DEVICE_VERIFICATION_PLAN"; do
+  "$DEVICE_VERIFICATION_PLAN" \
+  "$LOCAL_BROADCAST_PLAN"; do
   if [ ! -f "$required_path" ]; then
     printf '%s\n' "Required file is missing: ${required_path#"$ROOT_DIR/"}" >&2
     exit 1
@@ -996,6 +998,48 @@ fi
 for replacement_doc in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
   if ! grep -Fq "Replacement GATT connections close the previously owned GATT" "$replacement_doc"; then
     printf '%s\n' "$replacement_doc must document replacement GATT ownership cleanup." >&2
+    exit 1
+  fi
+done
+
+for local_broadcast_contract in \
+  'import android.support.v4.content.LocalBroadcastManager;' \
+  'private void sendGattBroadcast(final Intent intent)' \
+  'LocalBroadcastManager.getInstance(this).sendBroadcast(intent);'; do
+  if ! grep -Fq "$local_broadcast_contract" "$BLE_SERVICE"; then
+    printf '%s\n' "BLE service must keep local broadcast contract: $local_broadcast_contract" >&2
+    exit 1
+  fi
+done
+for local_receiver_contract in \
+  'import android.support.v4.content.LocalBroadcastManager;' \
+  'LocalBroadcastManager.getInstance(this).registerReceiver(' \
+  'LocalBroadcastManager.getInstance(this).unregisterReceiver(mGattUpdateReceiver);'; do
+  if ! grep -Fq "$local_receiver_contract" "$CONTROL_ACTIVITY"; then
+    printf '%s\n' "Control activity must keep local receiver contract: $local_receiver_contract" >&2
+    exit 1
+  fi
+done
+if grep -Fq '        sendBroadcast(intent);' "$BLE_SERVICE" || \
+   grep -Fq '        registerReceiver(mGattUpdateReceiver' "$CONTROL_ACTIVITY" || \
+   grep -Fq '        unregisterReceiver(mGattUpdateReceiver);' "$CONTROL_ACTIVITY"; then
+  printf '%s\n' "GATT events must not use framework broadcast publication or subscription." >&2
+  exit 1
+fi
+if [ "$(grep -Fc 'sendGattBroadcast(intent);' "$BLE_SERVICE")" -ne 5 ]; then
+  printf '%s\n' "Every GATT event publication path must use the local broadcast helper." >&2
+  exit 1
+fi
+for local_broadcast_doc in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! tr '\n' ' ' < "$local_broadcast_doc" | tr -s '[:space:]' ' ' | \
+      grep -Fqi 'in-process local broadcast'; then
+    printf '%s\n' "$local_broadcast_doc must document the in-process local broadcast boundary." >&2
+    exit 1
+  fi
+done
+for local_broadcast_plan_contract in 'Status: Completed' 'make check' 'mutations'; do
+  if ! grep -Fqi "$local_broadcast_plan_contract" "$LOCAL_BROADCAST_PLAN"; then
+    printf '%s\n' "HRM local broadcast plan must record completed evidence: $local_broadcast_plan_contract" >&2
     exit 1
   fi
 done

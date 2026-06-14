@@ -14,6 +14,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import java.util.List;
@@ -157,7 +158,7 @@ public class BluetoothLeService extends Service {
 
     private void broadcastUpdate(final String action) {
         final Intent intent = gattUpdateIntent(action);
-        sendBroadcast(intent);
+        sendGattBroadcast(intent);
     }
 
     private void broadcastUpdate(final String action,
@@ -165,7 +166,7 @@ public class BluetoothLeService extends Service {
         final Intent intent = gattUpdateIntent(action);
         if (characteristic == null) {
             Log.w(TAG, "GATT characteristic is unavailable.");
-            sendBroadcast(intent);
+            sendGattBroadcast(intent);
             return;
         }
 
@@ -178,7 +179,7 @@ public class BluetoothLeService extends Service {
                     0);
             if (flag == null) {
                 Log.w(TAG, "Heart rate measurement flags are unavailable.");
-                sendBroadcast(intent);
+                sendGattBroadcast(intent);
                 return;
             }
 
@@ -193,7 +194,7 @@ public class BluetoothLeService extends Service {
             final Integer heartRate = characteristic.getIntValue(format, 1);
             if (heartRate == null) {
                 Log.w(TAG, "Heart rate measurement value is unavailable.");
-                sendBroadcast(intent);
+                sendGattBroadcast(intent);
                 return;
             }
             Log.d(TAG, "Received heart rate measurement.");
@@ -208,7 +209,11 @@ public class BluetoothLeService extends Service {
                 intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
             }
         }
-        sendBroadcast(intent);
+        sendGattBroadcast(intent);
+    }
+
+    private void sendGattBroadcast(final Intent intent) {
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
     private Intent gattUpdateIntent(final String action) {
