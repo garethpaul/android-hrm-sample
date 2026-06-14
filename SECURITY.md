@@ -47,6 +47,8 @@ Helpful reports include:
   generic diagnostics and without exposing BLE identifiers or values.
 - Asynchronous descriptor write failures roll back local notification state
   only after the active GATT and pending descriptor identities match.
+- GATT connection, discovery, and heart-rate events use an in-process local
+  broadcast channel instead of accepting or publishing framework broadcasts.
 - Pinned, read-only GitHub Actions runs the root `make check` baseline without
   inheriting hosted Android SDK state.
 - The baseline pins and verifies the wrapper JAR and Gradle distribution checksums.

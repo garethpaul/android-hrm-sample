@@ -2,6 +2,8 @@
 
 ## 2026-06-14
 
+- Moved GATT state and heart-rate events to an in-process local broadcast
+  channel so external applications cannot spoof or observe those updates.
 - Replacement GATT connections close the previously owned GATT after successful
   replacement creation and before publishing the new connection.
 - Added an exact-commit HRM device verification matrix for scan, GATT ownership,
