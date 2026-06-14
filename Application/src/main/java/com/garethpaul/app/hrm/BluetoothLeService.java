@@ -30,6 +30,9 @@ public class BluetoothLeService extends Service {
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
     private BluetoothGatt mBluetoothGatt;
+    private BluetoothGattDescriptor mPendingDescriptorWrite;
+    private BluetoothGattCharacteristic mPendingNotificationCharacteristic;
+    private boolean mPendingNotificationEnabled;
     private int mConnectionState = STATE_DISCONNECTED;
 
     private static final int STATE_DISCONNECTED = 0;
@@ -63,6 +66,7 @@ public class BluetoothLeService extends Service {
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 Log.w(TAG, "GATT connection failed with status: " + status);
                 mConnectionState = STATE_DISCONNECTED;
+                clearPendingDescriptorWrite();
                 broadcastUpdate(ACTION_GATT_DISCONNECTED);
                 gatt.close();
                 mBluetoothGatt = null;
@@ -82,6 +86,7 @@ public class BluetoothLeService extends Service {
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 intentAction = ACTION_GATT_DISCONNECTED;
                 mConnectionState = STATE_DISCONNECTED;
+                clearPendingDescriptorWrite();
                 Log.i(TAG, "Disconnected from GATT server.");
                 broadcastUpdate(intentAction);
             }
@@ -124,6 +129,29 @@ public class BluetoothLeService extends Service {
             }
 
             broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+        }
+
+        @Override
+        public void onDescriptorWrite(BluetoothGatt gatt,
+                                      BluetoothGattDescriptor descriptor,
+                                      int status) {
+            if (gatt == null || gatt != mBluetoothGatt) {
+                Log.w(TAG, "Ignoring stale GATT descriptor callback.");
+                return;
+            }
+            if (descriptor == null || descriptor != mPendingDescriptorWrite) {
+                Log.w(TAG, "Ignoring unrelated GATT descriptor callback.");
+                return;
+            }
+
+            BluetoothGattCharacteristic characteristic =
+                    mPendingNotificationCharacteristic;
+            boolean enabled = mPendingNotificationEnabled;
+            clearPendingDescriptorWrite();
+            if (status != BluetoothGatt.GATT_SUCCESS && characteristic != null) {
+                Log.w(TAG, "Heart rate notification descriptor write failed.");
+                rollbackCharacteristicNotification(characteristic, enabled);
+            }
         }
     };
 
@@ -302,6 +330,7 @@ public class BluetoothLeService extends Service {
      * released properly.
      */
     public void close() {
+        clearPendingDescriptorWrite();
         if (mBluetoothGatt == null) {
             return;
         }
@@ -336,6 +365,12 @@ public class BluetoothLeService extends Service {
             Log.w(TAG, "BluetoothAdapter not initialized or characteristic unavailable.");
             return;
         }
+        boolean heartRateMeasurement =
+                UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid());
+        if (heartRateMeasurement && mPendingDescriptorWrite != null) {
+            Log.w(TAG, "Heart rate notification descriptor write is already pending.");
+            return;
+        }
         boolean notificationSet = mBluetoothGatt.setCharacteristicNotification(
                 characteristic,
                 enabled);
@@ -345,7 +380,7 @@ public class BluetoothLeService extends Service {
         }
 
         // This is specific to Heart Rate Measurement.
-        if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
+        if (heartRateMeasurement) {
             BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
                     UUID.fromString(SampleGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
             if (descriptor == null) {
@@ -364,12 +399,22 @@ public class BluetoothLeService extends Service {
                 return;
             }
 
+            mPendingDescriptorWrite = descriptor;
+            mPendingNotificationCharacteristic = characteristic;
+            mPendingNotificationEnabled = enabled;
             boolean descriptorWriteQueued = mBluetoothGatt.writeDescriptor(descriptor);
             if (!descriptorWriteQueued) {
                 Log.w(TAG, "Unable to queue heart rate notification descriptor write.");
+                clearPendingDescriptorWrite();
                 rollbackCharacteristicNotification(characteristic, enabled);
             }
         }
+    }
+
+    private void clearPendingDescriptorWrite() {
+        mPendingDescriptorWrite = null;
+        mPendingNotificationCharacteristic = null;
+        mPendingNotificationEnabled = false;
     }
 
     private void rollbackCharacteristicNotification(

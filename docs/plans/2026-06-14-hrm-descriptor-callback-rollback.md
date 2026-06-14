@@ -1,6 +1,6 @@
 # HRM Descriptor Callback Rollback
 
-Status: In Progress
+Status: Completed
 
 ## Problem
 
@@ -86,3 +86,30 @@ execution.
   https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback#onDescriptorWrite(android.bluetooth.BluetoothGatt,android.bluetooth.BluetoothGattDescriptor,int)
 - Android `BluetoothGatt.writeDescriptor` API reference:
   https://developer.android.com/reference/android/bluetooth/BluetoothGatt#writeDescriptor(android.bluetooth.BluetoothGattDescriptor)
+
+## Work Completed
+
+- Retained one active descriptor, characteristic, and requested notification
+  state before queueing a heart-rate descriptor write.
+- Rejected overlapping descriptor work before local notification mutation and
+  ignored callbacks from stale GATT instances or descriptors other than the
+  exact pending operation.
+- Cleared pending state before asynchronous failure rollback and on successful
+  completion, synchronous queue failure, disconnect, connection failure, and
+  close.
+- Added method-scoped source contracts and generic documentation without
+  changing BLE identifiers, descriptor values, broadcasts, or UI behavior.
+
+## Verification Results
+
+- Shell syntax and the dependency-free baseline checker passed.
+- Ten focused mutations were rejected: wrong GATT identity, wrong descriptor
+  identity, missing callback clear, rollback-before-clear ordering, missing
+  pending characteristic assignment, missing queue-failure clear, missing
+  disconnect clear, overlapping-write guard after local mutation, reflected
+  callback status, and stale plan status.
+- Bounded local and external-working-directory `make check`, exact diff,
+  generated-artifact, conflict-marker, whitespace, and credential-shaped
+  added-line results are recorded from the final implementation audit.
+- Emulator, physical BLE device, and forced asynchronous descriptor failure
+  behavior were not exercised and remain explicit runtime boundaries.
