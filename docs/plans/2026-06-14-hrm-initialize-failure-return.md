@@ -1,6 +1,6 @@
 # Stop HRM Connection After Initialization Failure
 
-Status: Planned
+Status: Completed
 
 ## Context
 
@@ -30,3 +30,19 @@ any GATT connection attempt.
 - No physical BLE peripheral or disabled-adapter device flow is exercised.
 - Existing stacked pull requests remain open and require explicit owner
   authorization before merge or closure.
+
+## Verification Results
+
+Completed on 2026-06-14:
+
+- SDK-backed `make check` passed source contracts, debug and release Java
+  compilation, Android lint with zero issues, Gradle check, and debug APK
+  assembly under Amazon Corretto 8 and Android API 22.
+- External-working-directory `make check` passed with Android SDK variables
+  intentionally unset.
+- Eight hostile mutations covering the missing or misplaced return,
+  pre-return connection, maintained documentation, and completed-plan status
+  were rejected.
+- Exact diff, generated-artifact, changed-line secret-pattern, and whitespace
+  audits passed before commit.
+- No physical BLE peripheral or disabled-adapter runtime was exercised.

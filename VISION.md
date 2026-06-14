@@ -19,6 +19,7 @@ The current focus is:
 
 Priority:
 
+- Stop failed Bluetooth initialization before connection work begins
 - Keep the Bluetooth LE scan/connect/display flow intact
 - Preserve the sample's source layout and Android support dependencies
 - Make SDK and build-tool assumptions visible

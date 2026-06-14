@@ -2,6 +2,7 @@
 
 ## 2026-06-14
 
+- Stopped failed Bluetooth initialization before attempting a GATT connection.
 - Moved GATT state and heart-rate events to an in-process local broadcast
   channel so external applications cannot spoof or observe those updates.
 - Replacement GATT connections close the previously owned GATT after successful
