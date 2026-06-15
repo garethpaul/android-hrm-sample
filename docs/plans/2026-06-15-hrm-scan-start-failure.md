@@ -1,6 +1,6 @@
 # Handle HRM Scan Start Failure
 
-Status: Planned
+Status: Completed
 
 ## Context
 
@@ -68,3 +68,19 @@ resource use, maintained guidance, and completed verification evidence.
 - No physical BLE peripheral or forced platform scan-start failure is exercised;
   `DEVICE_VERIFICATION.md` remains the runtime authority.
 - The branch remains stacked on PR #15 and must retain base-first ordering.
+
+## Verification Completed
+
+- Amazon Corretto 8 and the configured Android API 22 SDK compiled debug and
+  release Java sources, ran Gradle checks, reported zero lint issues for both
+  variants, and assembled the debug APK successfully.
+- Repository-root and external-directory SDK-backed `make check` gates passed;
+  the portable POSIX baseline also passed independently.
+- Nine isolated hostile mutations were rejected for return-value capture,
+  success branching, scan-state ordering, timeout ownership, failure idle
+  state, failure-message source and resource use, maintained guidance, and
+  plan-completion evidence.
+- Exact-path diff, generated-artifact, conflict-marker, dependency/workflow
+  drift, whitespace, and credential-shaped-addition audits passed.
+- No physical BLE peripheral or forced platform scan-start failure was exercised;
+  runtime verification remains explicit in `DEVICE_VERIFICATION.md`.

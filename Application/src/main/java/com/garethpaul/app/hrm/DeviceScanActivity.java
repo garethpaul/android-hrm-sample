@@ -184,10 +184,15 @@ public class DeviceScanActivity extends ListActivity {
         if (enable) {
             // Stops scanning after a pre-defined scan period.
             mHandler.removeCallbacks(mStopScanRunnable);
-            mHandler.postDelayed(mStopScanRunnable, SCAN_PERIOD);
-
-            mScanning = true;
-            mBluetoothAdapter.startLeScan(mLeScanCallback);
+            boolean scanStarted = mBluetoothAdapter.startLeScan(mLeScanCallback);
+            if (scanStarted) {
+                mScanning = true;
+                mHandler.postDelayed(mStopScanRunnable, SCAN_PERIOD);
+            } else {
+                mScanning = false;
+                Toast.makeText(this, com.garethpaul.app.hrm.R.string.scan_start_failed,
+                        Toast.LENGTH_SHORT).show();
+            }
         } else {
             mHandler.removeCallbacks(mStopScanRunnable);
             mScanning = false;

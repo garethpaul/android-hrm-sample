@@ -10,6 +10,7 @@ MANIFEST="$ROOT_DIR/Application/src/main/AndroidManifest.xml"
 README="$ROOT_DIR/README.md"
 SECURITY="$ROOT_DIR/SECURITY.md"
 RES_DIR="$ROOT_DIR/Application/src/main/res"
+STRINGS="$RES_DIR/values/strings.xml"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 CODEOWNERS="$ROOT_DIR/.github/CODEOWNERS"
 DATA_CALLBACK_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hrm-data-callback-ownership.md"
@@ -24,6 +25,7 @@ LOCAL_BROADCAST_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-local-broadcast-bounda
 INITIALIZE_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-initialize-failure-return.md"
 DISCOVERY_START_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-service-discovery-start-failure.md"
 DISCOVERY_CALLBACK_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-service-discovery-callback-failure.md"
+SCAN_START_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-scan-start-failure.md"
 SERVICE_AVAILABILITY_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-service-availability.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
@@ -39,9 +41,64 @@ for required_path in \
   "$LOCAL_BROADCAST_PLAN" \
   "$INITIALIZE_FAILURE_PLAN" \
   "$DISCOVERY_START_FAILURE_PLAN" \
-  "$DISCOVERY_CALLBACK_FAILURE_PLAN"; do
+  "$DISCOVERY_CALLBACK_FAILURE_PLAN" \
+  "$SCAN_START_FAILURE_PLAN"; do
   if [ ! -f "$required_path" ]; then
     printf '%s\n' "Required file is missing: ${required_path#"$ROOT_DIR/"}" >&2
+    exit 1
+  fi
+done
+
+for scan_start_contract in \
+  "boolean scanStarted = mBluetoothAdapter.startLeScan(mLeScanCallback);" \
+  "if (scanStarted) {" \
+  "Toast.makeText(this, com.garethpaul.app.hrm.R.string.scan_start_failed"; do
+  if ! grep -Fq "$scan_start_contract" "$SCAN_ACTIVITY"; then
+    printf '%s\n' "BLE scan startup must keep result handling: $scan_start_contract" >&2
+    exit 1
+  fi
+done
+
+if ! awk '
+  /private void scanLeDevice\(final boolean enable\)/ { in_scan = 1 }
+  in_scan && /boolean scanStarted = mBluetoothAdapter\.startLeScan/ { start_call = NR }
+  in_scan && /if \(scanStarted\)/ { success_branch = NR }
+  in_scan && /mScanning = true;/ { scanning = NR }
+  in_scan && /mHandler\.postDelayed\(mStopScanRunnable, SCAN_PERIOD\);/ { timeout = NR }
+  in_scan && /} else {/ && success_branch && !failure_branch { failure_branch = NR }
+  in_scan && failure_branch && /mScanning = false;/ && !idle { idle = NR }
+  in_scan && failure_branch && /R\.string\.scan_start_failed/ { failure_message = NR }
+  in_scan && /invalidateOptionsMenu\(\);/ {
+    exit !(start_call && success_branch && scanning && timeout && failure_branch &&
+      idle && failure_message && start_call < success_branch &&
+      success_branch < scanning && scanning < timeout && timeout < failure_branch &&
+      failure_branch < idle && idle < failure_message)
+  }
+' "$SCAN_ACTIVITY"; then
+  printf '%s\n' "BLE scan state and timeout must follow the platform start result." >&2
+  exit 1
+fi
+
+if ! grep -Fq '<string name="scan_start_failed">Unable to start Bluetooth scan.</string>' "$STRINGS"; then
+  printf '%s\n' "BLE scan startup failure string is missing." >&2
+  exit 1
+fi
+
+scan_start_guidance='BLE scans must enter the scanning state and schedule timeout cleanup only after Android reports that scan startup succeeded.'
+for scan_start_document in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! grep -Fq "$scan_start_guidance" "$scan_start_document"; then
+    printf '%s\n' "$scan_start_document must document BLE scan start result handling." >&2
+    exit 1
+  fi
+done
+
+for scan_start_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "hostile mutations" \
+  "No physical BLE peripheral or forced platform scan-start failure was exercised"; do
+  if ! grep -Fqi "$scan_start_plan_contract" "$SCAN_START_FAILURE_PLAN"; then
+    printf '%s\n' "HRM scan start failure plan must preserve completion evidence: $scan_start_plan_contract" >&2
     exit 1
   fi
 done
