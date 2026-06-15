@@ -16,6 +16,8 @@ Do not open a public issue that includes exploit code, secrets, personal data, o
 
 Helpful reports include:
 
+- Rejected GATT service discovery startup fails closed by publishing
+  disconnection, closing the owned connection, and releasing its reference.
 - Replacement GATT connections close the previously owned GATT before the new
   object becomes authoritative, while failed replacement creation preserves
   current ownership.

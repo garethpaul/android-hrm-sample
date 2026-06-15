@@ -140,6 +140,8 @@ evidence, and explicit unexecuted rows.
 ## Security and Privacy Notes
 
 - A failed Bluetooth initialization stops before any GATT connection attempt.
+- A rejected GATT service discovery start publishes disconnection, closes the
+  owned connection, and releases it instead of leaving a stalled session.
 
 - Review changes touching network requests, sockets, or service endpoints; examples from the scan include Application/build.gradle, Application/src/main/AndroidManifest.xml, Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java, Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java, and 6 more.
 - Review changes touching mobile permissions or privacy-sensitive device data; examples from the scan include .google/packaging.yaml, Application/src/main/AndroidManifest.xml, Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java, Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java, and 6 more.
@@ -184,6 +186,8 @@ evidence, and explicit unexecuted rows.
   data callback ownership guards.
 - See `docs/plans/2026-06-13-hrm-gatt-selection-guards.md` for stale GATT
   selection callback guards.
+- See `docs/plans/2026-06-15-hrm-service-discovery-start-failure.md` for the
+  rejected service-discovery cleanup contract.
 
 ## Contributing
 

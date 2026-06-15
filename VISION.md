@@ -39,6 +39,7 @@ Priority:
 - Keep Bluetooth service binding ownership explicit and guard activity actions
   until the bound service is available
 - Keep GATT connection state scoped to the currently owned callback instance
+- Fail closed when Android rejects a GATT service discovery start
 - Keep GATT state and heart-rate events on an in-process local broadcast channel
 - Replacement GATT connections close the previously owned GATT before
   publishing new connection ownership

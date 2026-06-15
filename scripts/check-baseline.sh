@@ -22,6 +22,7 @@ REPLACEMENT_GATT_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-replacement-gatt-clea
 DEVICE_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-device-verification-checklist.md"
 LOCAL_BROADCAST_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-local-broadcast-boundary.md"
 INITIALIZE_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-initialize-failure-return.md"
+DISCOVERY_START_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-service-discovery-start-failure.md"
 SERVICE_AVAILABILITY_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-service-availability.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
@@ -35,7 +36,8 @@ for required_path in \
   "$ROOT_DIR/DEVICE_VERIFICATION.md" \
   "$DEVICE_VERIFICATION_PLAN" \
   "$LOCAL_BROADCAST_PLAN" \
-  "$INITIALIZE_FAILURE_PLAN"; do
+  "$INITIALIZE_FAILURE_PLAN" \
+  "$DISCOVERY_START_FAILURE_PLAN"; do
   if [ ! -f "$required_path" ]; then
     printf '%s\n' "Required file is missing: ${required_path#"$ROOT_DIR/"}" >&2
     exit 1
@@ -329,8 +331,8 @@ for clear_descriptor_contract in \
     exit 1
   fi
 done
-if [ "$(grep -Fc 'clearPendingDescriptorWrite();' "$BLE_SERVICE")" -ne 6 ]; then
-  printf '%s\n' "GATT descriptor pending state must clear on completion, queue failure, disconnect, replacement, and close." >&2
+if [ "$(grep -Fc 'clearPendingDescriptorWrite();' "$BLE_SERVICE")" -ne 7 ]; then
+  printf '%s\n' "GATT descriptor pending state must clear on completion, queue failure, disconnect, discovery failure, replacement, and close." >&2
   exit 1
 fi
 for rollback_helper_contract in \
@@ -428,6 +430,47 @@ if grep -Fq "mBluetoothGatt.discoverServices()" "$BLE_SERVICE"; then
   printf '%s\n' "GATT callbacks must discover services through their current callback instance." >&2
   exit 1
 fi
+
+if ! awk '
+  /if \(newState == BluetoothProfile\.STATE_CONNECTED\)/ { in_connected = 1 }
+  in_connected && /broadcastUpdate\(intentAction\);/ { connected = NR }
+  in_connected && /boolean serviceDiscoveryStarted = gatt\.discoverServices\(\);/ { discover = NR }
+  in_connected && /if \(!serviceDiscoveryStarted\)/ { failure = NR }
+  in_connected && failure && /mConnectionState = STATE_DISCONNECTED;/ { state = NR }
+  in_connected && failure && /clearPendingDescriptorWrite\(\);/ { clear_pending = NR }
+  in_connected && failure && /broadcastUpdate\(ACTION_GATT_DISCONNECTED\);/ { disconnected = NR }
+  in_connected && failure && /gatt\.close\(\);/ { close_line = NR }
+  in_connected && failure && /mBluetoothGatt = null;/ {
+    release = NR
+    completed = 1
+    exit !(connected && discover && failure && state && clear_pending && disconnected && close_line && release &&
+      connected < discover && discover < failure && failure < state && state < clear_pending &&
+      clear_pending < disconnected && disconnected < close_line && close_line < release)
+  }
+  END { if (!completed) exit 1 }
+' "$BLE_SERVICE"; then
+  printf '%s\n' "Rejected GATT discovery startup must disconnect and release current ownership." >&2
+  exit 1
+fi
+
+for discovery_failure_document in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! tr '\n' ' ' < "$discovery_failure_document" | tr -s '[:space:]' ' ' | \
+      grep -Fiq "GATT service discovery start"; then
+    printf '%s\n' "$discovery_failure_document must document rejected GATT discovery startup." >&2
+    exit 1
+  fi
+done
+
+for discovery_failure_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "hostile mutations" \
+  "No physical BLE peripheral"; do
+  if ! grep -Fqi "$discovery_failure_plan_contract" "$DISCOVERY_START_FAILURE_PLAN"; then
+    printf '%s\n' "Discovery-start failure plan must record completion evidence: $discovery_failure_plan_contract" >&2
+    exit 1
+  fi
+done
 
 SERVICES_CALLBACK=$(sed -n \
   '/public void onServicesDiscovered/,/public void onCharacteristicRead/p' \

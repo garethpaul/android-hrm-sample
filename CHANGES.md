@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-15
+
+- Closed and released the current connection when Android rejects a GATT
+  service discovery start instead of waiting for a callback that cannot arrive.
+
 ## 2026-06-14
 
 - Stopped failed Bluetooth initialization before attempting a GATT connection.
