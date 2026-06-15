@@ -17,6 +17,7 @@ Do not open a public issue that includes exploit code, secrets, personal data, o
 Helpful reports include:
 
 - BLE scans must enter the scanning state and schedule timeout cleanup only after Android reports that scan startup succeeded.
+- BLE scanning must wait until the enable-Bluetooth system flow returns with an enabled adapter.
 - Rejected GATT service discovery startup fails closed by publishing
   disconnection, closing the owned connection, and releasing its reference.
 - A failed GATT service discovery callback clears pending descriptor state,

@@ -116,6 +116,7 @@ evidence, and explicit unexecuted rows.
 - BLE scan lifecycle guards nullable Bluetooth adapters, handlers, stopped list
   adapters, and null scan callback devices.
 - BLE scans must enter the scanning state and schedule timeout cleanup only after Android reports that scan startup succeeded.
+- BLE scanning must wait until the enable-Bluetooth system flow returns with an enabled adapter.
 - Scan and GATT control activities guard nullable ActionBar setup before
   applying title or up-navigation presentation.
 - GATT data-field updates guard missing data views so stale control layouts do

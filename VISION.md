@@ -25,6 +25,7 @@ Priority:
 - Make SDK and build-tool assumptions visible
 - Keep BLE startup failure paths explicit before scanning begins
 - BLE scans must enter the scanning state and schedule timeout cleanup only after Android reports that scan startup succeeded.
+- BLE scanning must wait until the enable-Bluetooth system flow returns with an enabled adapter.
 - Keep scan lifecycle callbacks safe after startup failure or pause cleanup
 - Keep heart-rate characteristic matching tied to standard GATT UUIDs
 - Parse heart-rate format flags from measurement data and reject truncated

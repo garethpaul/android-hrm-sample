@@ -1,6 +1,6 @@
 # Defer HRM Scan Until Bluetooth Is Enabled
 
-Status: Planned
+Status: Completed
 
 ## Context
 
@@ -76,3 +76,23 @@ completed verification evidence.
   initially disabled; `DEVICE_VERIFICATION.md` remains the authority for that
   manual scenario.
 - The branch remains stacked on PR #16 and must retain base-first ordering.
+
+## Verification Completed
+
+- Collapsed the duplicate disabled-adapter branch and returned immediately
+  after launching the existing `ACTION_REQUEST_ENABLE` system flow.
+- Preserved automatic scanning for an enabled adapter, the canceled-result
+  finish path, explicit scan controls, timeout ownership, and genuine scan
+  startup failure handling.
+- Amazon Corretto 8 and the configured Android API 22 SDK compiled debug and
+  release Java sources, ran Gradle checks, completed Android lint, and assembled
+  the debug APK successfully.
+- Repository-root and external-directory SDK-backed `make check` gates passed;
+  the portable POSIX baseline also passed independently.
+- Nine isolated hostile mutations were rejected for the enable intent, early
+  return, source ordering, duplicate condition, canceled-result finish and return,
+  maintained guidance, plan status, and verification evidence.
+- Exact-path diff, generated Gradle artifact, conflict-marker, dependency and
+  workflow drift, whitespace, and credential-shaped-addition audits passed.
+- No emulator, physical Android device, or live BLE peripheral was exercised;
+  runtime verification remains explicit in `DEVICE_VERIFICATION.md`.

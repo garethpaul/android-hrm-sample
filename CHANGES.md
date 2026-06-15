@@ -2,6 +2,7 @@
 
 ## 2026-06-15
 
+- BLE scanning must wait until the enable-Bluetooth system flow returns with an enabled adapter.
 - BLE scans must enter the scanning state and schedule timeout cleanup only after Android reports that scan startup succeeded.
 - Closed and released the current connection when Android rejects a GATT
   service discovery start instead of waiting for a callback that cannot arrive.

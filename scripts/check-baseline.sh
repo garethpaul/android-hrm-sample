@@ -26,6 +26,7 @@ INITIALIZE_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-initialize-failure-
 DISCOVERY_START_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-service-discovery-start-failure.md"
 DISCOVERY_CALLBACK_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-service-discovery-callback-failure.md"
 SCAN_START_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-scan-start-failure.md"
+DEFER_SCAN_ENABLE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-defer-scan-until-bluetooth-enabled.md"
 SERVICE_AVAILABILITY_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-service-availability.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
@@ -42,9 +43,85 @@ for required_path in \
   "$INITIALIZE_FAILURE_PLAN" \
   "$DISCOVERY_START_FAILURE_PLAN" \
   "$DISCOVERY_CALLBACK_FAILURE_PLAN" \
-  "$SCAN_START_FAILURE_PLAN"; do
+  "$SCAN_START_FAILURE_PLAN" \
+  "$DEFER_SCAN_ENABLE_PLAN"; do
   if [ ! -f "$required_path" ]; then
     printf '%s\n' "Required file is missing: ${required_path#"$ROOT_DIR/"}" >&2
+    exit 1
+  fi
+done
+
+for deferred_scan_contract in \
+  'if (!mBluetoothAdapter.isEnabled()) {' \
+  'Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);' \
+  'startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);'; do
+  if ! grep -Fq "$deferred_scan_contract" "$SCAN_ACTIVITY"; then
+    printf '%s\n' "BLE enable flow must keep contract: $deferred_scan_contract" >&2
+    exit 1
+  fi
+done
+
+disabled_check_count=$(awk '
+  /protected void onResume\(\)/ { in_resume = 1 }
+  in_resume && /protected void onActivityResult/ { in_resume = 0 }
+  in_resume && /if \(!mBluetoothAdapter\.isEnabled\(\)\)/ { count++ }
+  END { print count + 0 }
+' "$SCAN_ACTIVITY")
+if [ "$disabled_check_count" -ne 1 ]; then
+  printf '%s\n' "BLE enable flow must use one disabled-adapter condition." >&2
+  exit 1
+fi
+
+if ! awk '
+  /protected void onResume\(\)/ { in_resume = 1 }
+  in_resume && /if \(!mBluetoothAdapter\.isEnabled\(\)\)/ { disabled = NR }
+  in_resume && /startActivityForResult\(enableBtIntent, REQUEST_ENABLE_BT\);/ { request = NR }
+  in_resume && request && /return;/ && !early_return { early_return = NR }
+  in_resume && /mLeDeviceListAdapter = new LeDeviceListAdapter\(\);/ { adapter = NR }
+  in_resume && /scanLeDevice\(true\);/ {
+    scan = NR
+    checked = 1
+    exit !(disabled && request && early_return && adapter &&
+      disabled < request && request < early_return && early_return < adapter && adapter < scan)
+  }
+  in_resume && /protected void onActivityResult/ { exit 1 }
+  END { if (!checked) exit 1 }
+' "$SCAN_ACTIVITY"; then
+  printf '%s\n' "BLE scanning must wait until the enable-Bluetooth flow has returned." >&2
+  exit 1
+fi
+
+if ! awk '
+  /protected void onActivityResult/ { in_result = 1 }
+  in_result && /requestCode == REQUEST_ENABLE_BT/ { request = NR }
+  in_result && /resultCode == Activity\.RESULT_CANCELED/ { canceled = NR }
+  in_result && /finish\(\);/ { finish = NR }
+  in_result && /return;/ {
+    checked = 1
+    exit !(request && canceled && finish && request <= canceled && canceled < finish && finish < NR)
+  }
+  in_result && /protected void onPause/ { exit 1 }
+  END { if (!checked) exit 1 }
+' "$SCAN_ACTIVITY"; then
+  printf '%s\n' "BLE enable cancellation must still finish the activity." >&2
+  exit 1
+fi
+
+deferred_scan_guidance='BLE scanning must wait until the enable-Bluetooth system flow returns with an enabled adapter.'
+for deferred_scan_document in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! grep -Fq "$deferred_scan_guidance" "$deferred_scan_document"; then
+    printf '%s\n' "$deferred_scan_document must document deferred BLE scan startup." >&2
+    exit 1
+  fi
+done
+
+for deferred_scan_plan_contract in \
+  'Status: Completed' \
+  'make check' \
+  'hostile mutations' \
+  'No emulator, physical Android device, or live BLE peripheral was exercised'; do
+  if ! grep -Fqi "$deferred_scan_plan_contract" "$DEFER_SCAN_ENABLE_PLAN"; then
+    printf '%s\n' "Deferred BLE scan plan must preserve completion evidence: $deferred_scan_plan_contract" >&2
     exit 1
   fi
 done
