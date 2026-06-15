@@ -23,6 +23,7 @@ DEVICE_VERIFICATION_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-device-verificatio
 LOCAL_BROADCAST_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-local-broadcast-boundary.md"
 INITIALIZE_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-14-hrm-initialize-failure-return.md"
 DISCOVERY_START_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-service-discovery-start-failure.md"
+DISCOVERY_CALLBACK_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-service-discovery-callback-failure.md"
 SERVICE_AVAILABILITY_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-service-availability.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
@@ -37,7 +38,8 @@ for required_path in \
   "$DEVICE_VERIFICATION_PLAN" \
   "$LOCAL_BROADCAST_PLAN" \
   "$INITIALIZE_FAILURE_PLAN" \
-  "$DISCOVERY_START_FAILURE_PLAN"; do
+  "$DISCOVERY_START_FAILURE_PLAN" \
+  "$DISCOVERY_CALLBACK_FAILURE_PLAN"; do
   if [ ! -f "$required_path" ]; then
     printf '%s\n' "Required file is missing: ${required_path#"$ROOT_DIR/"}" >&2
     exit 1
@@ -331,8 +333,8 @@ for clear_descriptor_contract in \
     exit 1
   fi
 done
-if [ "$(grep -Fc 'clearPendingDescriptorWrite();' "$BLE_SERVICE")" -ne 7 ]; then
-  printf '%s\n' "GATT descriptor pending state must clear on completion, queue failure, disconnect, discovery failure, replacement, and close." >&2
+if [ "$(grep -Fc 'clearPendingDescriptorWrite();' "$BLE_SERVICE")" -ne 8 ]; then
+  printf '%s\n' "GATT descriptor pending state must clear on completion, queue failure, disconnect, discovery start or callback failure, replacement, and close." >&2
   exit 1
 fi
 for rollback_helper_contract in \
@@ -468,6 +470,49 @@ for discovery_failure_plan_contract in \
   "No physical BLE peripheral"; do
   if ! grep -Fqi "$discovery_failure_plan_contract" "$DISCOVERY_START_FAILURE_PLAN"; then
     printf '%s\n' "Discovery-start failure plan must record completion evidence: $discovery_failure_plan_contract" >&2
+    exit 1
+  fi
+done
+
+if ! awk '
+  /public void onServicesDiscovered\(BluetoothGatt gatt, int status\)/ { in_callback = 1 }
+  in_callback && /if \(gatt == null \|\| gatt != mBluetoothGatt\)/ { ownership = NR }
+  in_callback && /if \(status == BluetoothGatt.GATT_SUCCESS\)/ { success = NR }
+  in_callback && /broadcastUpdate\(ACTION_GATT_SERVICES_DISCOVERED\);/ { discovered = NR }
+  in_callback && /Log\.w\(TAG, "onServicesDiscovered received:/ { failure = NR }
+  in_callback && failure && /mConnectionState = STATE_DISCONNECTED;/ { state = NR }
+  in_callback && failure && /clearPendingDescriptorWrite\(\);/ { clear_pending = NR }
+  in_callback && failure && /broadcastUpdate\(ACTION_GATT_DISCONNECTED\);/ { disconnected = NR }
+  in_callback && failure && /gatt\.close\(\);/ { close_line = NR }
+  in_callback && failure && /mBluetoothGatt = null;/ {
+    release = NR
+    completed = 1
+    exit !(ownership && success && discovered && failure && state && clear_pending &&
+      disconnected && close_line && release && ownership < success && success < discovered &&
+      discovered < failure && failure < state && state < clear_pending &&
+      clear_pending < disconnected && disconnected < close_line && close_line < release)
+  }
+  END { if (!completed) exit 1 }
+' "$BLE_SERVICE"; then
+  printf '%s\n' "Failed GATT discovery callbacks must disconnect and release current ownership." >&2
+  exit 1
+fi
+
+for discovery_callback_document in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! tr '\n' ' ' < "$discovery_callback_document" | tr -s '[:space:]' ' ' | \
+      grep -Fiq "failed GATT service discovery callback"; then
+    printf '%s\n' "$discovery_callback_document must document failed GATT discovery callbacks." >&2
+    exit 1
+  fi
+done
+
+for discovery_callback_plan_contract in \
+  "Status: Completed" \
+  "make check" \
+  "Eleven hostile mutations" \
+  "No physical BLE peripheral"; do
+  if ! grep -Fqi "$discovery_callback_plan_contract" "$DISCOVERY_CALLBACK_FAILURE_PLAN"; then
+    printf '%s\n' "Discovery-callback failure plan must record completion evidence: $discovery_callback_plan_contract" >&2
     exit 1
   fi
 done

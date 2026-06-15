@@ -113,6 +113,11 @@ public class BluetoothLeService extends Service {
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
+                mConnectionState = STATE_DISCONNECTED;
+                clearPendingDescriptorWrite();
+                broadcastUpdate(ACTION_GATT_DISCONNECTED);
+                gatt.close();
+                mBluetoothGatt = null;
             }
         }
 

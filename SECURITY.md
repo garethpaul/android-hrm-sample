@@ -18,6 +18,8 @@ Helpful reports include:
 
 - Rejected GATT service discovery startup fails closed by publishing
   disconnection, closing the owned connection, and releasing its reference.
+- A failed GATT service discovery callback clears pending descriptor state,
+  publishes disconnection, and releases the current connection.
 - Replacement GATT connections close the previously owned GATT before the new
   object becomes authoritative, while failed replacement creation preserves
   current ownership.

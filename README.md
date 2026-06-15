@@ -142,6 +142,8 @@ evidence, and explicit unexecuted rows.
 - A failed Bluetooth initialization stops before any GATT connection attempt.
 - A rejected GATT service discovery start publishes disconnection, closes the
   owned connection, and releases it instead of leaving a stalled session.
+- A failed GATT service discovery callback publishes disconnection, closes the
+  owned connection, and releases it instead of leaving unusable services.
 
 - Review changes touching network requests, sockets, or service endpoints; examples from the scan include Application/build.gradle, Application/src/main/AndroidManifest.xml, Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java, Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java, and 6 more.
 - Review changes touching mobile permissions or privacy-sensitive device data; examples from the scan include .google/packaging.yaml, Application/src/main/AndroidManifest.xml, Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java, Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java, and 6 more.

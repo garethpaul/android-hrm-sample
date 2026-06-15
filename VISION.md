@@ -40,6 +40,7 @@ Priority:
   until the bound service is available
 - Keep GATT connection state scoped to the currently owned callback instance
 - Fail closed when Android rejects a GATT service discovery start
+- Terminate the current connection after a failed GATT service discovery callback
 - Keep GATT state and heart-rate events on an in-process local broadcast channel
 - Replacement GATT connections close the previously owned GATT before
   publishing new connection ownership

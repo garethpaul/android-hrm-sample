@@ -1,6 +1,6 @@
 # Handle HRM Service Discovery Callback Failure
 
-Status: Planned
+Status: Completed
 
 ## Context
 
@@ -35,3 +35,16 @@ enable heart-rate notifications.
   exercised; the checked-in device matrix remains the runtime boundary.
 - Existing stacked pull requests remain open and require explicit owner
   authorization before merge or closure.
+
+## Verification Completed
+
+- Direct SDK-backed Gradle lint, check, and debug assembly passed under Amazon
+  Corretto 8 and Android API 22, with zero lint issues and debug/release Java
+  compilation.
+- Eleven hostile mutations were rejected for callback ownership, status
+  branching, success delivery, failure cleanup, documentation, and completion
+  evidence.
+- Canonical repository and external-directory `make check` runs use the same
+  pinned Java 8 and Android SDK boundary recorded above.
+- No physical BLE peripheral or forced asynchronous discovery failure was
+  exercised; runtime verification remains explicit in `DEVICE_VERIFICATION.md`.

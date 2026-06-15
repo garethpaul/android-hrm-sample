@@ -4,6 +4,8 @@
 
 - Closed and released the current connection when Android rejects a GATT
   service discovery start instead of waiting for a callback that cannot arrive.
+- Closed and released the current connection after a failed GATT service
+  discovery callback instead of leaving an unusable connected state.
 
 ## 2026-06-14
 
