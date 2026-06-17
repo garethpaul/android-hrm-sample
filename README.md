@@ -115,6 +115,7 @@ evidence, and explicit unexecuted rows.
   services before requesting a Bluetooth adapter.
 - BLE scan lifecycle guards nullable Bluetooth adapters, handlers, stopped list
   adapters, and null scan callback devices.
+- BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
 - BLE scans must enter the scanning state and schedule timeout cleanup only after Android reports that scan startup succeeded.
 - BLE scanning must wait until the enable-Bluetooth system flow returns with an enabled adapter.
 - Scan and GATT control activities guard nullable ActionBar setup before
@@ -177,6 +178,8 @@ evidence, and explicit unexecuted rows.
   startup service guard.
 - See `docs/plans/2026-06-09-hrm-scan-lifecycle-guards.md` for BLE scan
   lifecycle and callback null guards.
+- See `docs/plans/2026-06-17-hrm-scan-list-selection-guards.md` for stale scan
+  list selection guards.
 - See `docs/plans/2026-06-09-hrm-broadcast-privacy.md` for the package-scoped
   GATT broadcast and heart-rate logging contract.
 - See `docs/plans/2026-06-09-hrm-data-field-guard.md` for GATT data-field

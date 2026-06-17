@@ -27,6 +27,7 @@ DISCOVERY_START_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-service-discov
 DISCOVERY_CALLBACK_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-service-discovery-callback-failure.md"
 SCAN_START_FAILURE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-scan-start-failure.md"
 DEFER_SCAN_ENABLE_PLAN="$ROOT_DIR/docs/plans/2026-06-15-hrm-defer-scan-until-bluetooth-enabled.md"
+SCAN_LIST_SELECTION_PLAN="$ROOT_DIR/docs/plans/2026-06-17-hrm-scan-list-selection-guards.md"
 SERVICE_AVAILABILITY_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-service-availability.md"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
@@ -366,6 +367,29 @@ fi
 
 if grep -Fq "getActionBar().set" "$SCAN_ACTIVITY" || grep -Fq "getActionBar().set" "$CONTROL_ACTIVITY"; then
   printf '%s\n' "HRM activities must guard nullable getActionBar() results." >&2
+  exit 1
+fi
+
+scan_selection_guidance="BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup."
+for scan_selection_doc in \
+  "$ROOT_DIR/AGENTS.md" \
+  "$README" \
+  "$SECURITY" \
+  "$ROOT_DIR/VISION.md" \
+  "$ROOT_DIR/CHANGES.md"; do
+  if ! grep -Fq "$scan_selection_guidance" "$scan_selection_doc"; then
+    printf '%s\n' "$scan_selection_doc must document BLE scan list selection guards." >&2
+    exit 1
+  fi
+done
+
+if [ ! -f "$SCAN_LIST_SELECTION_PLAN" ] || \
+   ! grep -Fq "title: HRM Scan List Selection Guards" "$SCAN_LIST_SELECTION_PLAN" || \
+   ! grep -Fq "type: fix" "$SCAN_LIST_SELECTION_PLAN" || \
+   ! grep -Fq "date: 2026-06-17" "$SCAN_LIST_SELECTION_PLAN" || \
+   ! grep -Fq "R1. A list-selection callback must return" "$SCAN_LIST_SELECTION_PLAN" || \
+   ! grep -Fq "Repository and external-directory Android gates" "$SCAN_LIST_SELECTION_PLAN"; then
+  printf '%s\n' "HRM scan list selection plan must keep metadata, requirements, and verification scope." >&2
   exit 1
 fi
 
@@ -713,6 +737,51 @@ done
 
 if ! grep -Fq "finish();" "$SCAN_ACTIVITY" || ! grep -Fq "return;" "$SCAN_ACTIVITY"; then
   printf '%s\n' "Device scan startup failure paths must finish and return." >&2
+  exit 1
+fi
+
+SCAN_LIST_CLICK=$(sed -n \
+  '/protected void onListItemClick/,/private void scanLeDevice/p' \
+  "$SCAN_ACTIVITY")
+for scan_selection_contract in \
+  "if (mLeDeviceListAdapter == null)" \
+  "mLeDeviceListAdapter.getDevice(position)" \
+  "if (device == null) return;"; do
+  if ! printf '%s\n' "$SCAN_LIST_CLICK" | grep -Fq "$scan_selection_contract"; then
+    printf '%s\n' "BLE scan list selection must keep callback guard: $scan_selection_contract" >&2
+    exit 1
+  fi
+done
+
+SCAN_DEVICE_LOOKUP=$(sed -n \
+  '/public BluetoothDevice getDevice(int position)/,/^        }/p' \
+  "$SCAN_ACTIVITY")
+for scan_lookup_contract in \
+  "position < 0" \
+  "position >= mLeDevices.size()" \
+  "return null;" \
+  "return mLeDevices.get(position);"; do
+  if ! printf '%s\n' "$SCAN_DEVICE_LOOKUP" | grep -Fq "$scan_lookup_contract"; then
+    printf '%s\n' "BLE scan device lookup must keep bounds contract: $scan_lookup_contract" >&2
+    exit 1
+  fi
+done
+
+if ! awk '
+  /protected void onListItemClick/ { in_click = 1 }
+  in_click && /if \(mLeDeviceListAdapter == null\)/ { adapter_guard = NR }
+  in_click && /mLeDeviceListAdapter\.getDevice\(position\)/ { lookup = NR; in_click = 0 }
+  /public BluetoothDevice getDevice\(int position\)/ { in_lookup = 1 }
+  in_lookup && /position < 0/ { lower_guard = NR }
+  in_lookup && /position >= mLeDevices\.size\(\)/ { upper_guard = NR }
+  in_lookup && /return mLeDevices\.get\(position\);/ { device_get = NR; in_lookup = 0 }
+  END {
+    exit !(adapter_guard && lookup && adapter_guard < lookup &&
+      lower_guard && upper_guard && device_get &&
+      lower_guard < device_get && upper_guard < device_get)
+  }
+' "$SCAN_ACTIVITY"; then
+  printf '%s\n' "BLE scan list guards must run before adapter and device-list access." >&2
   exit 1
 fi
 

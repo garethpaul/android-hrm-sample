@@ -164,6 +164,10 @@ public class DeviceScanActivity extends ListActivity {
 
     @Override
     protected void onListItemClick(ListView l, View v, int position, long id) {
+        if (mLeDeviceListAdapter == null) {
+            return;
+        }
+
         final BluetoothDevice device = mLeDeviceListAdapter.getDevice(position);
         if (device == null) return;
         final Intent intent = new Intent(this, DeviceControlActivity.class);
@@ -222,6 +226,10 @@ public class DeviceScanActivity extends ListActivity {
         }
 
         public BluetoothDevice getDevice(int position) {
+            if (position < 0 || position >= mLeDevices.size()) {
+                return null;
+            }
+
             return mLeDevices.get(position);
         }
 

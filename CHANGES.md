@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-17
+
+- BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
+- Added ordered source contracts for adapter availability, lower and upper
+  position bounds, null-device handling, and valid selection compatibility.
+
 ## 2026-06-15
 
 - BLE scanning must wait until the enable-Bluetooth system flow returns with an enabled adapter.

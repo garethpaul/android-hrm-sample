@@ -44,6 +44,7 @@ Helpful reports include:
   optional data views are unavailable.
 - Stale GATT selection callbacks fail closed before indexing mutable
   characteristic groups or using an unavailable BLE service.
+- BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
 - Bluetooth service binding ownership is explicit so failed binding and
   service-dependent activity actions do not trigger unowned unbinds or null
   service dereferences.
