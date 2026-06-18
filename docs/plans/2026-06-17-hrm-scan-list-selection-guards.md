@@ -2,6 +2,7 @@
 title: HRM Scan List Selection Guards
 type: fix
 date: 2026-06-17
+status: completed
 ---
 
 # HRM Scan List Selection Guards
@@ -132,3 +133,30 @@ out-of-range positions, but the scan-list boundary has no equivalent guard.
   dependencies, manifests, or CI action pins.
 - Do not add a new Android test framework or claim emulator, physical-device,
   or live BLE verification.
+
+## Work Completed
+
+- Guarded list callbacks before adapter access and guarded adapter lookup
+  against negative and stale upper-bound positions.
+- Preserved valid device extras, active-scan shutdown, and control-activity
+  launch behavior after validation succeeds.
+- Added portable source-ordering, guidance, and plan contracts for the
+  scan-list selection boundary.
+
+## Completed Verification
+
+- Repository and external-directory `make check` passed under Corretto Java 8
+  with Android API 22 and build-tools 24.0.3, covering source contracts,
+  zero-issue debug/release lint, Gradle checks, Java compilation, and debug APK
+  assembly.
+- Focused hostile mutations rejected missing adapter and position guards,
+  unsafe lookup ordering, direct unchecked indexing, guidance drift, and plan
+  contract removal.
+- Exact-path diff, whitespace, generated-artifact, ignored-output, and
+  credential-shaped-addition audits passed without changing runtime,
+  dependency, manifest, or workflow files.
+- PR #18 was open, clean, mergeable, and terminal-green at implementation head
+  `ea86bcbf2a55848b6e8f9f984a4a22a37089624d`; its canonical `check` job
+  succeeded in run `27693203941`.
+- Emulator, physical-device, and live BLE behavior were not exercised and
+  remain governed by `DEVICE_VERIFICATION.md`.

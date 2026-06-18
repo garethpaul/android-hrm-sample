@@ -393,6 +393,16 @@ if [ ! -f "$SCAN_LIST_SELECTION_PLAN" ] || \
   exit 1
 fi
 
+if ! grep -Fxq "status: completed" "$SCAN_LIST_SELECTION_PLAN" || \
+   ! grep -Fq "## Completed Verification" "$SCAN_LIST_SELECTION_PLAN" || \
+   ! grep -Fq 'Repository and external-directory `make check` passed' "$SCAN_LIST_SELECTION_PLAN" || \
+   ! grep -Fq "Focused hostile mutations rejected" "$SCAN_LIST_SELECTION_PLAN" || \
+   ! grep -Fq 'PR #18 was open, clean, mergeable, and terminal-green' "$SCAN_LIST_SELECTION_PLAN" || \
+   ! grep -Fq "ea86bcbf2a55848b6e8f9f984a4a22a37089624d" "$SCAN_LIST_SELECTION_PLAN"; then
+  printf '%s\n' "HRM scan list selection plan must record completed status and verification." >&2
+  exit 1
+fi
+
 for pattern in \
   "private void configureActionBar()" \
   "ActionBar actionBar = getActionBar();" \
