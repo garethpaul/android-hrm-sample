@@ -22,6 +22,9 @@ WRAPPER_PROPERTIES="$ROOT_DIR/gradle/wrapper/gradle-wrapper.properties"
 MAKEFILE="$ROOT_DIR/Makefile"
 ANDROID_RUNNER="$ROOT_DIR/scripts/run-android-verification.sh"
 PUBLICATION_GATE_TESTS="$ROOT_DIR/scripts/test-publication-gate.sh"
+ROOT_BUILD_FILE="$ROOT_DIR/build.gradle"
+SETTINGS_FILE="$ROOT_DIR/settings.gradle"
+LINT_CONFIG="$ROOT_DIR/Application/lint.xml"
 
 sha256_file() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -389,7 +392,7 @@ if [ "$workflow_paths" != "$CI_WORKFLOW" ]; then
 fi
 
 if [ "$(cat "$CI_WORKFLOW")" != "$(expected_ci_workflow)" ]; then
-  printf '%s\n' "GitHub Actions check workflow must match the approved full Android security baseline." >&2
+  printf '%s\n' "GitHub Actions check workflow must match the reviewed hosted Android verification workflow." >&2
   exit 1
 fi
 
@@ -418,12 +421,19 @@ if ! grep -Fq "canonical GitHub Actions workflow installs Android API 22" "$READ
 fi
 
 if [ ! -f "$CODEOWNERS" ] ||
-  [ "$(wc -l < "$CODEOWNERS" | tr -d ' ')" -ne 4 ] ||
+  [ "$(wc -l < "$CODEOWNERS" | tr -d ' ')" -ne 11 ] ||
   ! grep -Fxq '/.github/CODEOWNERS @garethpaul' "$CODEOWNERS" ||
   ! grep -Fxq '/.github/workflows/ @garethpaul' "$CODEOWNERS" ||
   ! grep -Fxq '/Makefile @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/build.gradle @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/settings.gradle @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/Application/build.gradle @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/Application/lint.xml @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/gradlew @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/gradlew.bat @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/gradle/wrapper/ @garethpaul' "$CODEOWNERS" ||
   ! grep -Fxq '/scripts/ @garethpaul' "$CODEOWNERS"; then
-  printf '%s\n' "CODEOWNERS must protect itself, the workflow, Makefile, and verification scripts." >&2
+  printf '%s\n' "CODEOWNERS must cover every publication-gate trust root." >&2
   exit 1
 fi
 
@@ -595,6 +605,42 @@ if [ ! -f "$MAKEFILE" ] || [ -L "$MAKEFILE" ] || \
   exit 1
 fi
 
+if [ ! -f "$BUILD_FILE" ] || [ -L "$BUILD_FILE" ] || \
+   [ "$(sha256_file "$BUILD_FILE")" != "5f87bcb825b5937e291428f4816f20d0f5b7b3db66e819e03a3d3c2a6f599cd8" ]; then
+  printf '%s\n' "Application Gradle build definition must retain the reviewed Android plugin tasks." >&2
+  exit 1
+fi
+
+if [ ! -f "$ROOT_BUILD_FILE" ] || [ -L "$ROOT_BUILD_FILE" ] || \
+   [ "$(sha256_file "$ROOT_BUILD_FILE")" != "5c210454b1facc1e317a759f6059324f793841eb23d1f549179b64d1584c55f8" ]; then
+  printf '%s\n' "Root Gradle build definition must retain the reviewed project contract." >&2
+  exit 1
+fi
+
+if [ ! -f "$SETTINGS_FILE" ] || [ -L "$SETTINGS_FILE" ] || \
+   [ "$(sha256_file "$SETTINGS_FILE")" != "85fa9044216c228a55fee5e669990ec71fa2e3a7c9b3944927698037ee304688" ]; then
+  printf '%s\n' "Gradle settings must retain the reviewed Application project inclusion." >&2
+  exit 1
+fi
+
+if [ ! -f "$LINT_CONFIG" ] || [ -L "$LINT_CONFIG" ] || \
+   [ "$(sha256_file "$LINT_CONFIG")" != "5ad8971f6154196884e37ecde3183adce5c075a29f9fdfee300deefbe183661e" ]; then
+  printf '%s\n' "Android lint configuration must retain the reviewed gate contract." >&2
+  exit 1
+fi
+
+for unreviewed_gradle_entry in \
+  "$ROOT_DIR/gradle.properties" \
+  "$ROOT_DIR/local.properties" \
+  "$ROOT_DIR/init.gradle" \
+  "$ROOT_DIR/init.d" \
+  "$ROOT_DIR/buildSrc"; do
+  if [ -e "$unreviewed_gradle_entry" ]; then
+    printf '%s\n' "Unreviewed Gradle configuration entry points are not allowed." >&2
+    exit 1
+  fi
+done
+
 if [ ! -x "$ANDROID_RUNNER" ] || [ -L "$ANDROID_RUNNER" ] || \
    [ "$(sha256_file "$ANDROID_RUNNER")" != "fe4d3c94fb20fcb015b5a2c4ba91b0e331f112c908d1546b7ce91beed649da9d" ]; then
   printf '%s\n' "Android verification must retain the reviewed exact wrapper and SDK runner." >&2
@@ -602,8 +648,13 @@ if [ ! -x "$ANDROID_RUNNER" ] || [ -L "$ANDROID_RUNNER" ] || \
 fi
 
 if [ ! -x "$PUBLICATION_GATE_TESTS" ] || [ -L "$PUBLICATION_GATE_TESTS" ] || \
-   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "cd219e9f48bbcfcff446e5235ec54966fd25bf4f74b2e501a3b9c4a906ecd964" ]; then
+   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "b97df25baed0a8e5c0502746d7519cb75f78260bdc997f577248dbc245844254" ]; then
   printf '%s\n' "Publication-gate mutation tests must retain the reviewed contract." >&2
+  exit 1
+fi
+
+if ! grep -Fxq 'APPROVED_RUNNER_SHA256=fe4d3c94fb20fcb015b5a2c4ba91b0e331f112c908d1546b7ce91beed649da9d' "$PUBLICATION_GATE_TESTS"; then
+  printf '%s\n' "Publication-gate tests must independently pin the reviewed Android runner." >&2
   exit 1
 fi
 
