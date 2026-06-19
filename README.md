@@ -17,7 +17,7 @@ This README is based on the checked-in source, manifests, scripts, and repositor
 ## Repository Contents
 
 - `README.md` - project overview and local usage notes
-- `.github/workflows/check.yml` - CI baseline that runs the root Make gate
+- `.github/workflows/check.yml` - the supported authenticated publication gate
 - `build.gradle` - Android or Gradle build configuration
 - `.google` - source or example code
 - `Application` - source or example code
@@ -66,11 +66,13 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 ## Testing and Verification
 
-- `./scripts/run-android-verification.sh` is the canonical Android verification
-  command when `ANDROID_HOME` and a Java 8 `JAVA_HOME` are configured.
-- The exact runner is the only authenticated publication-gate entry point.
-  Make targets deliberately refuse verification because caller-controlled Make
-  flags can skip recipes, ignore failures, replace the shell, or select another
+- The pinned GitHub Actions `Check` workflow is the only supported authenticated
+  publication-gate entry point. It invokes `./scripts/run-android-verification.sh`
+  before any repository-controlled test step.
+- The runner requires GitHub's Ubuntu 24.04 Corretto 8 toolcache, a clean exact
+  reviewed Git tree and index, and builds a fresh archive of that reviewed commit.
+- Make is unsupported and fails while parsing. Caller-controlled Make flags can
+  otherwise skip recipes, ignore failures, replace the shell, or select another
   makefile.
 - `scripts/check-baseline.sh` - runs SDK-free HRM sample baseline checks.
 - The SDK-free baseline protects GATT property checks, BLE address validation,
@@ -82,8 +84,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - The canonical GitHub Actions workflow installs Android API 22 and build-tools
   24.0.3, selects Java 8, checks out the reviewed pull-request head, and invokes
   the exact runner on Ubuntu 24.04 with superseded-run cancellation.
-- Local authenticated verification requires `ANDROID_HOME`; the runner binds
-  `ANDROID_SDK_ROOT` to that same SDK and matches the hosted toolchain contract.
+- Local checks are not authenticated publication evidence. Maintainers may run
+  the SDK-free baseline and direct Gradle commands for development feedback.
 
 The legacy plugin uses its non-queued PNG cruncher because the concurrent
 cruncher can fail nondeterministically on clean hosted builds. BLE behavior

@@ -34,8 +34,11 @@ Helpful reports include:
   optional data views are unavailable.
 - Pinned, read-only GitHub Actions checks out the reviewed head and invokes the
   exact Android runner with the hosted API 22 SDK and Java 8 toolchain.
-- The exact runner, not Make, is the authenticated hosted publication gate.
-  Make flags can suppress recipes or failures before repository code executes.
+- The pinned GitHub Actions `Check` workflow is the only supported authenticated
+  publication gate. It runs the exact runner before repository-controlled tests,
+  binds the clean Git tree and Corretto toolcache, and builds a fresh commit archive.
+- Make is unsupported because flags can suppress recipes or failures before
+  repository code executes.
 - The baseline pins and verifies the wrapper JAR and Gradle distribution checksums.
   An uncached bootstrap still depends on Gradle's HTTPS service, so these
   integrity controls do not provide offline reproducibility.

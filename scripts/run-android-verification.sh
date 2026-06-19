@@ -1,22 +1,84 @@
 #!/usr/bin/env sh
 set -eu
 
-ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-GRADLEW="$ROOT_DIR/gradlew"
+SOURCE_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
 
 unset ANDROID_SDK GRADLE GRADLE_OPTS GNUMAKEFLAGS JAVA_OPTS JAVA_TOOL_OPTIONS MAKEFLAGS MAKEFILES MFLAGS _JAVA_OPTIONS
+unset GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_CEILING_DIRECTORIES GIT_COMMON_DIR GIT_CONFIG_COUNT GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM GIT_CONFIG_SYSTEM GIT_DIR GIT_DISCOVERY_ACROSS_FILESYSTEM GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_WORK_TREE
 
-if [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -z "${EXPECTED_COMMIT:-}" ]; then
-  printf '%s\n' "Hosted verification must name the reviewed commit." >&2
+if [ -z "${EXPECTED_COMMIT:-}" ]; then
+  printf '%s\n' "Authenticated verification must name the reviewed commit." >&2
   exit 1
 fi
 
-if [ -n "${EXPECTED_COMMIT:-}" ]; then
-  ACTUAL_COMMIT=$(/usr/bin/git -C "$ROOT_DIR" rev-parse HEAD)
-  if [ "$ACTUAL_COMMIT" != "$EXPECTED_COMMIT" ]; then
-    printf '%s\n' "Hosted verification checked out $ACTUAL_COMMIT instead of $EXPECTED_COMMIT." >&2
+REPOSITORY_ROOT=$(/usr/bin/git -C "$SOURCE_ROOT" rev-parse --show-toplevel)
+REPOSITORY_ROOT=$(CDPATH= cd -- "$REPOSITORY_ROOT" && pwd -P)
+GIT_DIRECTORY=$(/usr/bin/git -C "$SOURCE_ROOT" rev-parse --absolute-git-dir)
+GIT_DIRECTORY=$(CDPATH= cd -- "$GIT_DIRECTORY" && pwd -P)
+COMMON_DIRECTORY=$(/usr/bin/git -C "$SOURCE_ROOT" rev-parse --git-common-dir)
+case "$COMMON_DIRECTORY" in
+  /*) ;;
+  *) COMMON_DIRECTORY="$SOURCE_ROOT/$COMMON_DIRECTORY" ;;
+esac
+COMMON_DIRECTORY=$(CDPATH= cd -- "$COMMON_DIRECTORY" && pwd -P)
+
+if [ "$REPOSITORY_ROOT" != "$SOURCE_ROOT" ] || \
+   [ "$GIT_DIRECTORY" != "$SOURCE_ROOT/.git" ] || \
+   [ "$COMMON_DIRECTORY" != "$SOURCE_ROOT/.git" ]; then
+  printf '%s\n' "Authenticated verification requires the reviewed repository and common Git directory." >&2
+  exit 1
+fi
+
+ACTUAL_COMMIT=$(/usr/bin/git -C "$SOURCE_ROOT" rev-parse HEAD)
+if [ "$ACTUAL_COMMIT" != "$EXPECTED_COMMIT" ]; then
+  printf '%s\n' "Hosted verification checked out $ACTUAL_COMMIT instead of $EXPECTED_COMMIT." >&2
+  exit 1
+fi
+
+INDEX_TREE=$(/usr/bin/git -C "$SOURCE_ROOT" write-tree)
+EXPECTED_TREE=$(/usr/bin/git -C "$SOURCE_ROOT" rev-parse "$EXPECTED_COMMIT^{tree}")
+if [ "$INDEX_TREE" != "$EXPECTED_TREE" ] || \
+   ! /usr/bin/git -C "$SOURCE_ROOT" diff --quiet --no-ext-diff || \
+   ! /usr/bin/git -C "$SOURCE_ROOT" diff --cached --quiet --no-ext-diff || \
+   [ -n "$(/usr/bin/git -C "$SOURCE_ROOT" status --porcelain=v1 --untracked-files=all)" ]; then
+  printf '%s\n' "Authenticated verification requires a clean tracked tree and index." >&2
+  exit 1
+fi
+
+if [ "${GITHUB_ACTIONS:-}" != "true" ] || \
+   [ "${RUNNER_OS:-}" != "Linux" ] || \
+   [ "${ImageOS:-}" != "ubuntu24" ]; then
+  printf '%s\n' "Authenticated verification is supported only by the pinned Ubuntu 24.04 GitHub Actions workflow." >&2
+  exit 1
+fi
+
+if [ "${RUNNER_TOOL_CACHE:-}" != "/opt/hostedtoolcache" ] || \
+   [ -z "${JAVA_HOME:-}" ] || [ -z "${JAVA_HOME_8_X64:-}" ]; then
+  printf '%s\n' "Hosted Java must come from the pinned Corretto toolcache." >&2
+  exit 1
+fi
+
+JAVA_ROOT=$(readlink -f "$JAVA_HOME")
+JAVA_8_ROOT=$(readlink -f "$JAVA_HOME_8_X64")
+case "$JAVA_ROOT" in
+  /opt/hostedtoolcache/Java_Corretto_jdk/8.*/x64) ;;
+  *)
+    printf '%s\n' "Hosted Java must come from the pinned Corretto toolcache." >&2
     exit 1
-  fi
+    ;;
+esac
+
+if [ "$JAVA_ROOT" != "$JAVA_8_ROOT" ] || \
+   [ ! -x "$JAVA_ROOT/bin/java" ] || \
+   [ ! -f "$JAVA_ROOT/release" ] || \
+   ! grep -Fq 'IMPLEMENTOR="Amazon.com Inc."' "$JAVA_ROOT/release"; then
+  printf '%s\n' "Hosted Java must come from the pinned Corretto toolcache." >&2
+  exit 1
+fi
+
+if ! "$JAVA_ROOT/bin/java" -version 2>&1 | grep -Eq 'Corretto|OpenJDK Runtime Environment.*1\.8|version "1\.8\.'; then
+  printf '%s\n' "The hosted Android verification gate requires Amazon Corretto 8." >&2
+  exit 1
 fi
 
 if [ -z "${ANDROID_HOME:-}" ] || [ ! -d "$ANDROID_HOME" ]; then
@@ -24,9 +86,9 @@ if [ -z "${ANDROID_HOME:-}" ] || [ ! -d "$ANDROID_HOME" ]; then
   exit 1
 fi
 
-SDK_ROOT=$(CDPATH= cd -- "$ANDROID_HOME" && pwd)
+SDK_ROOT=$(CDPATH= cd -- "$ANDROID_HOME" && pwd -P)
 if [ -n "${ANDROID_SDK_ROOT:-}" ] && \
-   [ "$(CDPATH= cd -- "$ANDROID_SDK_ROOT" && pwd)" != "$SDK_ROOT" ]; then
+   [ "$(CDPATH= cd -- "$ANDROID_SDK_ROOT" && pwd -P)" != "$SDK_ROOT" ]; then
   printf '%s\n' "ANDROID_HOME and ANDROID_SDK_ROOT must identify the same SDK." >&2
   exit 1
 fi
@@ -37,33 +99,30 @@ if [ ! -f "$SDK_ROOT/platforms/android-22/android.jar" ] || \
   exit 1
 fi
 
-if [ -z "${JAVA_HOME:-}" ] || [ ! -x "$JAVA_HOME/bin/java" ]; then
-  printf '%s\n' "JAVA_HOME must identify the configured Java 8 runtime." >&2
-  exit 1
-fi
-
-if ! "$JAVA_HOME/bin/java" -version 2>&1 | grep -Eq 'version "1\.8\.'; then
-  printf '%s\n' "The Android verification gate requires Java 8." >&2
-  exit 1
-fi
-
-PATH="$JAVA_HOME/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+PATH="$JAVA_ROOT/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export PATH
+JAVA_HOME="$JAVA_ROOT"
 ANDROID_HOME="$SDK_ROOT"
 ANDROID_SDK_ROOT="$SDK_ROOT"
-export ANDROID_HOME ANDROID_SDK_ROOT
+export JAVA_HOME ANDROID_HOME ANDROID_SDK_ROOT
 
-"$ROOT_DIR/scripts/check-baseline.sh"
-
-TEMP_ROOT=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/android-hrm-verification.XXXXXX")
+TEMP_ROOT=$(mktemp -d "${RUNNER_TEMP:-/tmp}/android-hrm-verification.XXXXXX")
 trap 'rm -rf "$TEMP_ROOT"' EXIT HUP INT TERM
+SOURCE_ARCHIVE="$TEMP_ROOT/source.tar"
+BUILD_ROOT="$TEMP_ROOT/source"
 BUILD_LOG="$TEMP_ROOT/gradle.log"
 GRADLE_USER_HOME="$TEMP_ROOT/gradle-user-home"
 export GRADLE_USER_HOME
 
+mkdir "$BUILD_ROOT"
+/usr/bin/git -C "$SOURCE_ROOT" archive --format=tar --output="$SOURCE_ARCHIVE" "$EXPECTED_COMMIT"
+/usr/bin/tar -xf "$SOURCE_ARCHIVE" -C "$BUILD_ROOT"
+
+"$BUILD_ROOT/scripts/check-baseline.sh"
+
 if ! (
-  cd "$ROOT_DIR"
-  "$GRADLEW" --no-daemon --console plain clean lint check assembleDebug
+  cd "$BUILD_ROOT"
+  "$BUILD_ROOT/gradlew" --no-daemon --console plain clean lint check assembleDebug
 ) >"$BUILD_LOG" 2>&1; then
   cat "$BUILD_LOG" >&2
   exit 1
@@ -88,16 +147,16 @@ if ! grep -Fq "BUILD SUCCESSFUL" "$BUILD_LOG"; then
   exit 1
 fi
 
-if [ ! -s "$ROOT_DIR/Application/build/outputs/lint-results.xml" ] || \
-   [ ! -s "$ROOT_DIR/Application/build/outputs/apk/Application-debug.apk" ]; then
+if [ ! -s "$BUILD_ROOT/Application/build/outputs/lint-results.xml" ] || \
+   [ ! -s "$BUILD_ROOT/Application/build/outputs/apk/Application-debug.apk" ]; then
   printf '%s\n' "Expected lint and debug APK artifacts were not produced." >&2
   exit 1
 fi
 
-if ! find "$ROOT_DIR/Application/build/intermediates/classes/debug" -type f -name '*.class' -print -quit | grep -q . || \
-   ! find "$ROOT_DIR/Application/build/intermediates/classes/release" -type f -name '*.class' -print -quit | grep -q .; then
+if ! find "$BUILD_ROOT/Application/build/intermediates/classes/debug" -type f -name '*.class' -size +0c -print -quit | grep -q . || \
+   ! find "$BUILD_ROOT/Application/build/intermediates/classes/release" -type f -name '*.class' -size +0c -print -quit | grep -q .; then
   printf '%s\n' "Expected debug and release Java class artifacts were not produced." >&2
   exit 1
 fi
 
-printf '%s\n' "Authenticated Gradle lint, check, debug/release compilation, and debug assembly passed."
+printf '%s\n' "Reviewed-head Gradle lint, check, debug/release compilation, and debug assembly passed."

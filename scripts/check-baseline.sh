@@ -91,13 +91,13 @@ jobs:
           distribution: corretto
           java-version: "8"
 
-      - name: Test publication-gate integrity
-        run: ./scripts/test-publication-gate.sh
-
       - name: Run authenticated Android verification
         env:
           EXPECTED_COMMIT: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: ./scripts/run-android-verification.sh
+
+      - name: Test publication-gate integrity
+        run: ./scripts/test-publication-gate.sh
 EOF
 }
 
@@ -419,13 +419,13 @@ fi
 
 if ! grep -Fq "canonical GitHub Actions workflow installs Android API 22" "$README" || \
    ! grep -Fq "2026-06-12-hosted-android-verification.md" "$README" || \
-   ! grep -Fq "The exact runner is the only authenticated publication-gate entry point." "$README" || \
+   ! grep -Fq "The pinned GitHub Actions \`Check\` workflow is the only supported authenticated" "$README" || \
    grep -Fq 'runs full `make check`' "$README"; then
   printf '%s\n' "README must document the hosted Android gate and plan." >&2
   exit 1
 fi
 
-if ! grep -Fq "The exact runner, not Make, is the authenticated hosted publication gate." "$SECURITY" || \
+if ! grep -Fq "The pinned GitHub Actions \`Check\` workflow is the only supported authenticated" "$SECURITY" || \
    grep -Fq 'runs the root `make check` baseline' "$SECURITY"; then
   printf '%s\n' "Security guidance must bound authenticated evidence to the exact runner." >&2
   exit 1
@@ -611,7 +611,7 @@ if [ -n "$(find "$ROOT_DIR" -maxdepth 1 \( -name GNUmakefile -o -name makefile \
 fi
 
 if [ ! -f "$MAKEFILE" ] || [ -L "$MAKEFILE" ] || \
-   [ "$(sha256_file "$MAKEFILE")" != "d38a9521f170b31a7ced2b985e6fb107af3328c927addd2ed8f90b29f4f8cd60" ]; then
+   [ "$(sha256_file "$MAKEFILE")" != "e5c1d9f6c72ea2fa6d38132c159a298173f9640b75744adc15b75a5913d2181b" ]; then
   printf '%s\n' "Makefile must retain the reviewed non-substitutable verification entry point." >&2
   exit 1
 fi
@@ -653,18 +653,18 @@ for unreviewed_gradle_entry in \
 done
 
 if [ ! -x "$ANDROID_RUNNER" ] || [ -L "$ANDROID_RUNNER" ] || \
-   [ "$(sha256_file "$ANDROID_RUNNER")" != "956d172ccc4a0e0cd0d6c7d7875c7fee81a94a7687ccd1e04733f723e57dd66c" ]; then
+   [ "$(sha256_file "$ANDROID_RUNNER")" != "bf85c90f2f4a6221de9ed5ca3138eedca588cc8776e67716310faaabbbf42edb" ]; then
   printf '%s\n' "Android verification must retain the reviewed exact wrapper and SDK runner." >&2
   exit 1
 fi
 
 if [ ! -x "$PUBLICATION_GATE_TESTS" ] || [ -L "$PUBLICATION_GATE_TESTS" ] || \
-   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "dca3f2771df3bfd75d43a5fcfe6906c0cd0cb0a52b9629e99917747418bb3815" ]; then
+   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "a25f7c03726912d746ff4f889a7d33036bfd3f4d4044b8febc8e4da3cf8e02a1" ]; then
   printf '%s\n' "Publication-gate mutation tests must retain the reviewed contract." >&2
   exit 1
 fi
 
-if ! grep -Fxq 'APPROVED_RUNNER_SHA256=956d172ccc4a0e0cd0d6c7d7875c7fee81a94a7687ccd1e04733f723e57dd66c' "$PUBLICATION_GATE_TESTS"; then
+if ! grep -Fxq 'APPROVED_RUNNER_SHA256=bf85c90f2f4a6221de9ed5ca3138eedca588cc8776e67716310faaabbbf42edb' "$PUBLICATION_GATE_TESTS"; then
   printf '%s\n' "Publication-gate tests must independently pin the reviewed Android runner." >&2
   exit 1
 fi
