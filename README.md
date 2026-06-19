@@ -55,7 +55,9 @@ Gradle's HTTPS distribution service.
 git clone https://github.com/garethpaul/android-hrm-sample.git
 cd android-hrm-sample
 scripts/check-baseline.sh
-./scripts/run-android-verification.sh
+./gradlew lint --no-daemon
+./gradlew check --no-daemon
+./gradlew assembleDebug --no-daemon
 ```
 
 The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
@@ -70,7 +72,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   publication-gate entry point. It invokes `./scripts/run-android-verification.sh`
   before any repository-controlled test step.
 - The runner requires GitHub's Ubuntu 24.04 Corretto 8 toolcache, a clean exact
-  reviewed Git tree and index, and builds a fresh archive of that reviewed commit.
+  reviewed Git tree and index, and verifies that its fresh archive matches every
+  tracked blob, mode, symlink, and path in that reviewed commit.
 - Make is unsupported and fails while parsing. Caller-controlled Make flags can
   otherwise skip recipes, ignore failures, replace the shell, or select another
   makefile.

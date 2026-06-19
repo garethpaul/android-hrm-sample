@@ -5,7 +5,7 @@ ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/android-hrm-publication-gate.XXXXXX")
 trap 'rm -rf "$TEST_ROOT"' EXIT HUP INT TERM
 FAILURES=0
-APPROVED_RUNNER_SHA256=bf85c90f2f4a6221de9ed5ca3138eedca588cc8776e67716310faaabbbf42edb
+APPROVED_RUNNER_SHA256=33a7262b70ae73e16733980c76c06c6c89666040147e2a4e5736352513fb080f
 
 if [ "$(sha256sum "$ROOT_DIR/scripts/run-android-verification.sh" | cut -d ' ' -f 1)" != "$APPROVED_RUNNER_SHA256" ]; then
   printf '%s\n' "The Android runner does not match the independently reviewed digest." >&2
@@ -70,6 +70,44 @@ expect_runner_rejected() {
   fi
 
   printf '%s\n' "PASS: Android runner rejected $name"
+}
+
+expect_archive_rejected() {
+  name=$1
+  mutation=$2
+  fixture="$TEST_ROOT/$name"
+  archive="$TEST_ROOT/$name.tar"
+  extracted="$TEST_ROOT/$name-extracted"
+  verifier_log="$TEST_ROOT/$name-verifier.log"
+
+  copy_repository "$fixture"
+  initialize_git_fixture "$fixture"
+  (
+    cd "$fixture"
+    sh -c "$mutation"
+    git add .
+    git commit -qm "$name"
+    git archive --format=tar --output="$archive" HEAD
+  )
+  mkdir "$extracted"
+  tar -xf "$archive" -C "$extracted"
+
+  if "$fixture/scripts/verify-archive-tree.py" \
+    "$fixture" HEAD "$extracted" >"$verifier_log" 2>&1; then
+    printf '%s\n' "FAIL: archive verifier accepted $name" >&2
+    cat "$verifier_log" >&2
+    FAILURES=$((FAILURES + 1))
+    return 0
+  fi
+
+  if ! grep -Fq 'Archive contents do not exactly match the reviewed Git tree.' "$verifier_log"; then
+    printf '%s\n' "FAIL: archive verifier rejected $name for the wrong reason" >&2
+    cat "$verifier_log" >&2
+    FAILURES=$((FAILURES + 1))
+    return 0
+  fi
+
+  printf '%s\n' "PASS: archive verifier rejected $name"
 }
 
 expect_rejected() {
@@ -177,7 +215,7 @@ exit 0
 EOF
 chmod +x scripts/run-android-verification.sh
 new_hash=$(sha256sum scripts/run-android-verification.sh | cut -d " " -f 1)
-sed -i.bak "s/bf85c90f2f4a6221de9ed5ca3138eedca588cc8776e67716310faaabbbf42edb/$new_hash/g" scripts/check-baseline.sh
+sed -i.bak "s/33a7262b70ae73e16733980c76c06c6c89666040147e2a4e5736352513fb080f/$new_hash/g" scripts/check-baseline.sh
 rm scripts/check-baseline.sh.bak'
 expect_rejected appended-application-gradle-forgery \
   'Application Gradle build definition must retain the reviewed Android plugin tasks.' \
@@ -244,6 +282,23 @@ expect_runner_rejected git-work-tree-substitution-with-dirty-tree \
   'Authenticated verification requires a clean tracked tree and index.' \
   'mkdir ../clean-tree; git archive HEAD | tar -xf - -C ../clean-tree; printf "\nunauthorized drift\n" >> README.md; export GIT_WORK_TREE="$PWD/../clean-tree"'
 
+expect_archive_rejected export-ignore-java-source \
+  'printf "%s\n" "Application/src/main/java/com/garethpaul/app/hrm/ArchiveIgnoredBroken.java export-ignore" > .gitattributes
+cat > Application/src/main/java/com/garethpaul/app/hrm/ArchiveIgnoredBroken.java <<"EOF"
+package com.garethpaul.app.hrm;
+public class ArchiveIgnoredBroken { public void broken() { int value = } }
+EOF'
+expect_archive_rejected export-ignore-build-input \
+  'printf "%s\n" "Application/build.gradle export-ignore" > .gitattributes'
+expect_archive_rejected export-ignore-publication-script \
+  'printf "%s\n" "scripts/check-baseline.sh export-ignore" > .gitattributes'
+expect_archive_rejected export-subst-byte-drift \
+  'printf "%s\n" "README.md export-subst" > .gitattributes
+cat >> README.md <<"EOF"
+
+archive commit: $Format:%H$
+EOF'
+
 make_command=$(make -s -n -f "$ROOT_DIR/Makefile" ROOT=/tmp/attacker/ check 2>&1 || :)
 if printf '%s\n' "$make_command" | grep -Fq '/tmp/attacker/'; then
   printf '%s\n' "FAIL: command-line ROOT redirected the reviewed Make entry point" >&2
@@ -303,6 +358,23 @@ if ! grep -Fq 'The pinned GitHub Actions `Check` workflow is the only supported 
   FAILURES=$((FAILURES + 1))
 else
   printf '%s\n' "PASS: README bounds publication evidence to the exact runner"
+fi
+
+README_SETUP=$(sed -n '/^### Setup$/,/^## Running or Using the Project$/p' "$ROOT_DIR/README.md")
+if printf '%s\n' "$README_SETUP" | grep -Fq './scripts/run-android-verification.sh'; then
+  printf '%s\n' "FAIL: README setup instructs local execution of the hosted-only runner" >&2
+  FAILURES=$((FAILURES + 1))
+else
+  printf '%s\n' "PASS: README setup omits the hosted-only runner"
+fi
+
+if grep -Fq 'make check' "$ROOT_DIR/docs/readme-overview.svg" || \
+   ! grep -Fq 'GitHub Actions Check' "$ROOT_DIR/docs/readme-overview.svg" || \
+   ! grep -Fq 'Make unsupported' "$ROOT_DIR/docs/readme-overview.svg"; then
+  printf '%s\n' "FAIL: overview graphic does not describe the supported verification boundary" >&2
+  FAILURES=$((FAILURES + 1))
+else
+  printf '%s\n' "PASS: overview graphic describes the supported verification boundary"
 fi
 
 if ! grep -Fq 'The pinned GitHub Actions `Check` workflow is the only supported authenticated' "$ROOT_DIR/SECURITY.md" || \

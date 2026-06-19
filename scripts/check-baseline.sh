@@ -22,6 +22,7 @@ WRAPPER_PROPERTIES="$ROOT_DIR/gradle/wrapper/gradle-wrapper.properties"
 MAKEFILE="$ROOT_DIR/Makefile"
 ANDROID_RUNNER="$ROOT_DIR/scripts/run-android-verification.sh"
 PUBLICATION_GATE_TESTS="$ROOT_DIR/scripts/test-publication-gate.sh"
+ARCHIVE_VERIFIER="$ROOT_DIR/scripts/verify-archive-tree.py"
 ROOT_BUILD_FILE="$ROOT_DIR/build.gradle"
 SETTINGS_FILE="$ROOT_DIR/settings.gradle"
 LINT_CONFIG="$ROOT_DIR/Application/lint.xml"
@@ -653,18 +654,24 @@ for unreviewed_gradle_entry in \
 done
 
 if [ ! -x "$ANDROID_RUNNER" ] || [ -L "$ANDROID_RUNNER" ] || \
-   [ "$(sha256_file "$ANDROID_RUNNER")" != "bf85c90f2f4a6221de9ed5ca3138eedca588cc8776e67716310faaabbbf42edb" ]; then
+   [ "$(sha256_file "$ANDROID_RUNNER")" != "33a7262b70ae73e16733980c76c06c6c89666040147e2a4e5736352513fb080f" ]; then
   printf '%s\n' "Android verification must retain the reviewed exact wrapper and SDK runner." >&2
   exit 1
 fi
 
 if [ ! -x "$PUBLICATION_GATE_TESTS" ] || [ -L "$PUBLICATION_GATE_TESTS" ] || \
-   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "a25f7c03726912d746ff4f889a7d33036bfd3f4d4044b8febc8e4da3cf8e02a1" ]; then
+   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "24c35b0d61d270802e6569251a9e2f4ef993a82137a6053b8ff11fcb2ff9d795" ]; then
   printf '%s\n' "Publication-gate mutation tests must retain the reviewed contract." >&2
   exit 1
 fi
 
-if ! grep -Fxq 'APPROVED_RUNNER_SHA256=bf85c90f2f4a6221de9ed5ca3138eedca588cc8776e67716310faaabbbf42edb' "$PUBLICATION_GATE_TESTS"; then
+if [ ! -x "$ARCHIVE_VERIFIER" ] || [ -L "$ARCHIVE_VERIFIER" ] || \
+   [ "$(sha256_file "$ARCHIVE_VERIFIER")" != "ed6387131b2d82056f92539ed5481f177c0739f9aded434c9fa594198c739076" ]; then
+  printf '%s\n' "Archive manifest verifier must be present and executable." >&2
+  exit 1
+fi
+
+if ! grep -Fxq 'APPROVED_RUNNER_SHA256=33a7262b70ae73e16733980c76c06c6c89666040147e2a4e5736352513fb080f' "$PUBLICATION_GATE_TESTS"; then
   printf '%s\n' "Publication-gate tests must independently pin the reviewed Android runner." >&2
   exit 1
 fi

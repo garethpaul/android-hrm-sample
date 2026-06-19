@@ -111,12 +111,15 @@ trap 'rm -rf "$TEMP_ROOT"' EXIT HUP INT TERM
 SOURCE_ARCHIVE="$TEMP_ROOT/source.tar"
 BUILD_ROOT="$TEMP_ROOT/source"
 BUILD_LOG="$TEMP_ROOT/gradle.log"
+ARCHIVE_VERIFIER="$TEMP_ROOT/verify-archive-tree.py"
 GRADLE_USER_HOME="$TEMP_ROOT/gradle-user-home"
 export GRADLE_USER_HOME
 
 mkdir "$BUILD_ROOT"
 /usr/bin/git -C "$SOURCE_ROOT" archive --format=tar --output="$SOURCE_ARCHIVE" "$EXPECTED_COMMIT"
 /usr/bin/tar -xf "$SOURCE_ARCHIVE" -C "$BUILD_ROOT"
+/usr/bin/git -C "$SOURCE_ROOT" show "$EXPECTED_COMMIT:scripts/verify-archive-tree.py" >"$ARCHIVE_VERIFIER"
+/usr/bin/python3 "$ARCHIVE_VERIFIER" "$SOURCE_ROOT" "$EXPECTED_COMMIT" "$BUILD_ROOT"
 
 "$BUILD_ROOT/scripts/check-baseline.sh"
 
