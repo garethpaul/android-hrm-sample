@@ -655,13 +655,13 @@ for unreviewed_gradle_entry in \
 done
 
 if [ ! -x "$ANDROID_RUNNER" ] || [ -L "$ANDROID_RUNNER" ] || \
-   [ "$(sha256_file "$ANDROID_RUNNER")" != "2988e1aefb23dc2788db6c8f622d315ca35f4af832a3a3ad38c7411379f124e0" ]; then
+   [ "$(sha256_file "$ANDROID_RUNNER")" != "a92d36117e22dc215b3c3ff0ff55d451a3aa819beafa369439025219392c3381" ]; then
   printf '%s\n' "Android verification must retain the reviewed exact wrapper and SDK runner." >&2
   exit 1
 fi
 
 if [ ! -x "$PUBLICATION_GATE_TESTS" ] || [ -L "$PUBLICATION_GATE_TESTS" ] || \
-   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "32a76765bb12af3e8b4ec07c60635d55cbcb2cccfbaf938281486b26096f58ab" ]; then
+   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "56d2fcb0aef4753026dc7871e6fecbe0f7eb8b8224dd7c5a3212e05b534e26d1" ]; then
   printf '%s\n' "Publication-gate mutation tests must retain the reviewed contract." >&2
   exit 1
 fi
@@ -672,7 +672,7 @@ if [ ! -x "$ARCHIVE_VERIFIER" ] || [ -L "$ARCHIVE_VERIFIER" ] || \
   exit 1
 fi
 
-if ! grep -Fxq 'APPROVED_RUNNER_SHA256=2988e1aefb23dc2788db6c8f622d315ca35f4af832a3a3ad38c7411379f124e0' "$PUBLICATION_GATE_TESTS"; then
+if ! grep -Fxq 'APPROVED_RUNNER_SHA256=a92d36117e22dc215b3c3ff0ff55d451a3aa819beafa369439025219392c3381' "$PUBLICATION_GATE_TESTS"; then
   printf '%s\n' "Publication-gate tests must independently pin the reviewed Android runner." >&2
   exit 1
 fi

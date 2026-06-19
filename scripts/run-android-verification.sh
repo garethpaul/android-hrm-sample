@@ -69,14 +69,12 @@ case "$JAVA_ROOT" in
 esac
 
 if [ "$JAVA_ROOT" != "$JAVA_8_ROOT" ] || \
-   [ ! -x "$JAVA_ROOT/bin/java" ] || \
-   [ ! -f "$JAVA_ROOT/release" ] || \
-   ! grep -Fq 'IMPLEMENTOR="Amazon.com Inc."' "$JAVA_ROOT/release"; then
+   [ ! -x "$JAVA_ROOT/bin/java" ]; then
   printf '%s\n' "Hosted Java must come from the pinned Corretto toolcache." >&2
   exit 1
 fi
 
-if ! "$JAVA_ROOT/bin/java" -version 2>&1 | grep -Eq 'Corretto|OpenJDK Runtime Environment.*1\.8|version "1\.8\.'; then
+if ! "$JAVA_ROOT/bin/java" -version 2>&1 | grep -Eq 'Corretto-8([ .]|$)'; then
   printf '%s\n' "The hosted Android verification gate requires Amazon Corretto 8." >&2
   exit 1
 fi
