@@ -4,7 +4,20 @@ set -eu
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 GRADLEW="$ROOT_DIR/gradlew"
 
-unset ANDROID_SDK GRADLE GNUMAKEFLAGS MAKEFLAGS MAKEFILES MFLAGS
+unset ANDROID_SDK GRADLE GRADLE_OPTS GNUMAKEFLAGS JAVA_OPTS JAVA_TOOL_OPTIONS MAKEFLAGS MAKEFILES MFLAGS _JAVA_OPTIONS
+
+if [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -z "${EXPECTED_COMMIT:-}" ]; then
+  printf '%s\n' "Hosted verification must name the reviewed commit." >&2
+  exit 1
+fi
+
+if [ -n "${EXPECTED_COMMIT:-}" ]; then
+  ACTUAL_COMMIT=$(/usr/bin/git -C "$ROOT_DIR" rev-parse HEAD)
+  if [ "$ACTUAL_COMMIT" != "$EXPECTED_COMMIT" ]; then
+    printf '%s\n' "Hosted verification checked out $ACTUAL_COMMIT instead of $EXPECTED_COMMIT." >&2
+    exit 1
+  fi
+fi
 
 if [ -z "${ANDROID_HOME:-}" ] || [ ! -d "$ANDROID_HOME" ]; then
   printf '%s\n' "ANDROID_HOME must name the installed Android SDK." >&2

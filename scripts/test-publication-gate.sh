@@ -5,7 +5,7 @@ ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/android-hrm-publication-gate.XXXXXX")
 trap 'rm -rf "$TEST_ROOT"' EXIT HUP INT TERM
 FAILURES=0
-APPROVED_RUNNER_SHA256=fe4d3c94fb20fcb015b5a2c4ba91b0e331f112c908d1546b7ce91beed649da9d
+APPROVED_RUNNER_SHA256=956d172ccc4a0e0cd0d6c7d7875c7fee81a94a7687ccd1e04733f723e57dd66c
 
 if [ "$(sha256sum "$ROOT_DIR/scripts/run-android-verification.sh" | cut -d ' ' -f 1)" != "$APPROVED_RUNNER_SHA256" ]; then
   printf '%s\n' "The Android runner does not match the independently reviewed digest." >&2
@@ -83,6 +83,12 @@ expect_rejected workflow-sdk-environment-substitution \
 expect_rejected workflow-shell-command-substitution \
   'GitHub Actions check workflow must match the reviewed hosted Android verification workflow.' \
   "sed -i.bak 's#run: ./scripts/run-android-verification.sh#run: sh -c ./scripts/run-android-verification.sh#' .github/workflows/check.yml; rm .github/workflows/check.yml.bak"
+expect_rejected workflow-default-pull-request-merge-ref \
+  'GitHub Actions check workflow must match the reviewed hosted Android verification workflow.' \
+  "sed -i.bak '/ref:.*pull_request.head.sha/d' .github/workflows/check.yml; rm .github/workflows/check.yml.bak"
+expect_rejected workflow-missing-expected-commit \
+  'GitHub Actions check workflow must match the reviewed hosted Android verification workflow.' \
+  "sed -i.bak '/EXPECTED_COMMIT:/d' .github/workflows/check.yml; rm .github/workflows/check.yml.bak"
 expect_rejected runner-gradle-variable-substitution \
   'Android verification must retain the reviewed exact wrapper and SDK runner.' \
   'cat > scripts/run-android-verification.sh <<"EOF"
@@ -123,7 +129,7 @@ exit 0
 EOF
 chmod +x scripts/run-android-verification.sh
 new_hash=$(sha256sum scripts/run-android-verification.sh | cut -d " " -f 1)
-sed -i.bak "s/fe4d3c94fb20fcb015b5a2c4ba91b0e331f112c908d1546b7ce91beed649da9d/$new_hash/g" scripts/check-baseline.sh
+sed -i.bak "s/956d172ccc4a0e0cd0d6c7d7875c7fee81a94a7687ccd1e04733f723e57dd66c/$new_hash/g" scripts/check-baseline.sh
 rm scripts/check-baseline.sh.bak'
 expect_rejected appended-application-gradle-forgery \
   'Application Gradle build definition must retain the reviewed Android plugin tasks.' \
@@ -149,6 +155,30 @@ expect_rejected added-local-properties \
 expect_rejected added-buildsrc \
   'Unreviewed Gradle configuration entry points are not allowed.' \
   'mkdir -p buildSrc/src/main/groovy; printf "class Fake {}\n" > buildSrc/src/main/groovy/Fake.groovy'
+
+make_command=$(make -s -n -f "$ROOT_DIR/Makefile" ROOT=/tmp/attacker/ check)
+if printf '%s\n' "$make_command" | grep -Fq '/tmp/attacker/'; then
+  printf '%s\n' "FAIL: command-line ROOT redirected the reviewed Make entry point" >&2
+  FAILURES=$((FAILURES + 1))
+else
+  printf '%s\n' "PASS: command-line ROOT cannot redirect the reviewed Make entry point"
+fi
+
+if ! grep -Fq 'unset ANDROID_SDK GRADLE GRADLE_OPTS GNUMAKEFLAGS JAVA_OPTS JAVA_TOOL_OPTIONS MAKEFLAGS MAKEFILES MFLAGS _JAVA_OPTIONS' \
+  "$ROOT_DIR/scripts/run-android-verification.sh"; then
+  printf '%s\n' "FAIL: Android runner does not clear inherited JVM and Gradle injection options" >&2
+  FAILURES=$((FAILURES + 1))
+else
+  printf '%s\n' "PASS: Android runner clears inherited JVM and Gradle injection options"
+fi
+
+if ! grep -Fq 'EXPECTED_COMMIT' "$ROOT_DIR/scripts/run-android-verification.sh" || \
+   ! grep -Fq '/usr/bin/git -C "$ROOT_DIR" rev-parse HEAD' "$ROOT_DIR/scripts/run-android-verification.sh"; then
+  printf '%s\n' "FAIL: Android runner does not bind hosted evidence to the reviewed commit" >&2
+  FAILURES=$((FAILURES + 1))
+else
+  printf '%s\n' "PASS: Android runner binds hosted evidence to the reviewed commit"
+fi
 
 if [ "$FAILURES" -ne 0 ]; then
   printf '%s\n' "$FAILURES publication-gate mutations were accepted." >&2

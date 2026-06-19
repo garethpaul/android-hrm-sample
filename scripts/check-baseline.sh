@@ -80,6 +80,7 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Install Android SDK packages
         run: '"${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-22" "build-tools;24.0.3"'
@@ -94,6 +95,8 @@ jobs:
         run: ./scripts/test-publication-gate.sh
 
       - name: Run authenticated Android verification
+        env:
+          EXPECTED_COMMIT: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: ./scripts/run-android-verification.sh
 EOF
 }
@@ -600,7 +603,7 @@ if [ -n "$(find "$ROOT_DIR" -maxdepth 1 \( -name GNUmakefile -o -name makefile \
 fi
 
 if [ ! -f "$MAKEFILE" ] || [ -L "$MAKEFILE" ] || \
-   [ "$(sha256_file "$MAKEFILE")" != "22e6c79ec6bc991058dcd198bf5062702cfadd582dbeaa77ce07620b0b50fe18" ]; then
+   [ "$(sha256_file "$MAKEFILE")" != "11917fe963da5c3b8b087e5ed40119de1e072e60a74fbf070fbf444392389ab8" ]; then
   printf '%s\n' "Makefile must retain the reviewed non-substitutable verification entry point." >&2
   exit 1
 fi
@@ -642,18 +645,18 @@ for unreviewed_gradle_entry in \
 done
 
 if [ ! -x "$ANDROID_RUNNER" ] || [ -L "$ANDROID_RUNNER" ] || \
-   [ "$(sha256_file "$ANDROID_RUNNER")" != "fe4d3c94fb20fcb015b5a2c4ba91b0e331f112c908d1546b7ce91beed649da9d" ]; then
+   [ "$(sha256_file "$ANDROID_RUNNER")" != "956d172ccc4a0e0cd0d6c7d7875c7fee81a94a7687ccd1e04733f723e57dd66c" ]; then
   printf '%s\n' "Android verification must retain the reviewed exact wrapper and SDK runner." >&2
   exit 1
 fi
 
 if [ ! -x "$PUBLICATION_GATE_TESTS" ] || [ -L "$PUBLICATION_GATE_TESTS" ] || \
-   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "b97df25baed0a8e5c0502746d7519cb75f78260bdc997f577248dbc245844254" ]; then
+   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "d63797748ea2e218eed7c71d2eddf645ca1ccb9ab7c2bffd1578911c2d3ff007" ]; then
   printf '%s\n' "Publication-gate mutation tests must retain the reviewed contract." >&2
   exit 1
 fi
 
-if ! grep -Fxq 'APPROVED_RUNNER_SHA256=fe4d3c94fb20fcb015b5a2c4ba91b0e331f112c908d1546b7ce91beed649da9d' "$PUBLICATION_GATE_TESTS"; then
+if ! grep -Fxq 'APPROVED_RUNNER_SHA256=956d172ccc4a0e0cd0d6c7d7875c7fee81a94a7687ccd1e04733f723e57dd66c' "$PUBLICATION_GATE_TESTS"; then
   printf '%s\n' "Publication-gate tests must independently pin the reviewed Android runner." >&2
   exit 1
 fi
