@@ -36,6 +36,96 @@ initialize_git_fixture() {
   )
 }
 
+configure_fake_hosted_inputs() {
+  scenario=$1
+  fake_root="$TEST_ROOT/$name-hosted-inputs"
+  mkdir -p "$fake_root/arbitrary-java-layout/bin" \
+    "$fake_root/android-sdk/platforms/android-22" \
+    "$fake_root/android-sdk/build-tools/24.0.3"
+  printf x >"$fake_root/android-sdk/platforms/android-22/android.jar"
+  printf '#!/bin/sh\nexit 0\n' >"$fake_root/android-sdk/build-tools/24.0.3/aapt"
+  chmod +x "$fake_root/android-sdk/build-tools/24.0.3/aapt"
+  cat >"$fake_root/arbitrary-java-layout/bin/java" <<'EOF'
+#!/usr/bin/env sh
+set -eu
+
+if [ "${1:-}" = "-version" ]; then
+  printf '%s\n' 'openjdk version "1.8.0_fake"' >&2
+  exit 0
+fi
+
+if [ "${FAKE_GRADLE_SCENARIO:-success}" = "failure" ]; then
+  printf '%s\n' "simulated Gradle failure" >&2
+  exit 42
+fi
+
+mkdir -p Application/build/outputs/apk \
+  Application/build/intermediates/classes/debug \
+  Application/build/intermediates/classes/release
+
+if [ "${FAKE_GRADLE_SCENARIO:-success}" != "missing-lint-apk" ]; then
+  printf x >Application/build/outputs/lint-results.xml
+  printf x >Application/build/outputs/apk/Application-debug.apk
+fi
+
+printf x >Application/build/intermediates/classes/debug/Fake.class
+if [ "${FAKE_GRADLE_SCENARIO:-success}" != "missing-release-class" ]; then
+  printf x >Application/build/intermediates/classes/release/Fake.class
+fi
+
+printf '%s\n' \
+  ':Application:compileDebugJavaNote: synthetic legacy diagnostic' \
+  ':Application:compileReleaseJavaNote: synthetic legacy diagnostic' \
+  ':Application:lint'
+if [ "${FAKE_GRADLE_SCENARIO:-success}" != "missing-task" ]; then
+  printf '%s\n' ':Application:check'
+fi
+printf '%s\n' ':Application:assembleDebug' 'BUILD SUCCESSFUL'
+EOF
+  chmod +x "$fake_root/arbitrary-java-layout/bin/java"
+  GITHUB_ACTIONS=true
+  RUNNER_OS=Linux
+  ImageOS=ubuntu24
+  JAVA_HOME="$fake_root/arbitrary-java-layout"
+  ANDROID_HOME="$fake_root/android-sdk"
+  FAKE_GRADLE_SCENARIO=$scenario
+  export GITHUB_ACTIONS RUNNER_OS ImageOS JAVA_HOME ANDROID_HOME FAKE_GRADLE_SCENARIO
+}
+
+expect_runner_accepted() {
+  name=$1
+  setup=$2
+  fixture="$TEST_ROOT/$name"
+
+  copy_repository "$fixture"
+  initialize_git_fixture "$fixture"
+  setup_script="$TEST_ROOT/$name-setup.sh"
+  runner_log="$TEST_ROOT/$name-runner.log"
+  printf '%s\n' "$setup" >"$setup_script"
+
+  if ! (
+    cd "$fixture"
+    . "$setup_script"
+    EXPECTED_COMMIT=$(git rev-parse HEAD)
+    export EXPECTED_COMMIT
+    "$fixture/scripts/run-android-verification.sh"
+  ) >"$runner_log" 2>&1; then
+    printf '%s\n' "FAIL: Android runner rejected $name" >&2
+    cat "$runner_log" >&2
+    FAILURES=$((FAILURES + 1))
+    return 0
+  fi
+
+  if ! grep -Fq 'Reviewed-head Gradle lint, check, debug/release compilation, and debug assembly passed.' "$runner_log"; then
+    printf '%s\n' "FAIL: Android runner accepted $name without complete evidence" >&2
+    cat "$runner_log" >&2
+    FAILURES=$((FAILURES + 1))
+    return 0
+  fi
+
+  printf '%s\n' "PASS: Android runner accepted $name"
+}
+
 expect_runner_rejected() {
   name=$1
   expected_message=$2
@@ -259,6 +349,21 @@ expect_rejected added-local-properties \
 expect_rejected added-buildsrc \
   'Unreviewed Gradle configuration entry points are not allowed.' \
   'mkdir -p buildSrc/src/main/groovy; printf "class Fake {}\n" > buildSrc/src/main/groovy/Fake.groovy'
+
+expect_runner_accepted setup-java-arbitrary-layout-with-legacy-note \
+  'configure_fake_hosted_inputs success'
+expect_runner_rejected propagated-gradle-failure \
+  'simulated Gradle failure' \
+  'configure_fake_hosted_inputs failure'
+expect_runner_rejected missing-real-gradle-task \
+  'Gradle did not execute :Application:check from a clean build.' \
+  'configure_fake_hosted_inputs missing-task'
+expect_runner_rejected missing-lint-and-apk-artifacts \
+  'Expected lint and debug APK artifacts were not produced.' \
+  'configure_fake_hosted_inputs missing-lint-apk'
+expect_runner_rejected missing-release-class-artifact \
+  'Expected debug and release Java class artifacts were not produced.' \
+  'configure_fake_hosted_inputs missing-release-class'
 
 expect_runner_rejected dirty-tracked-worktree \
   'Authenticated verification requires a clean tracked tree and index.' \
