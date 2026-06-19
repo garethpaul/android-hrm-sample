@@ -137,7 +137,7 @@ for task in \
   lint \
   check \
   assembleDebug; do
-  if ! grep -Eq "^:Application:${task}$" "$BUILD_LOG"; then
+  if ! grep -Eq "^:Application:${task}(Note: .*)?$" "$BUILD_LOG"; then
     printf '%s\n' "Gradle did not execute :Application:${task} from a clean build." >&2
     exit 1
   fi
