@@ -19,6 +19,9 @@ GRADLEW="$ROOT_DIR/gradlew"
 GRADLEW_BAT="$ROOT_DIR/gradlew.bat"
 WRAPPER_JAR="$ROOT_DIR/gradle/wrapper/gradle-wrapper.jar"
 WRAPPER_PROPERTIES="$ROOT_DIR/gradle/wrapper/gradle-wrapper.properties"
+MAKEFILE="$ROOT_DIR/Makefile"
+ANDROID_RUNNER="$ROOT_DIR/scripts/run-android-verification.sh"
+PUBLICATION_GATE_TESTS="$ROOT_DIR/scripts/test-publication-gate.sh"
 
 sha256_file() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -84,8 +87,11 @@ jobs:
           distribution: corretto
           java-version: "8"
 
-      - name: Run full verification
-        run: make check
+      - name: Test publication-gate integrity
+        run: ./scripts/test-publication-gate.sh
+
+      - name: Run authenticated Android verification
+        run: ./scripts/run-android-verification.sh
 EOF
 }
 
@@ -416,19 +422,10 @@ if [ ! -f "$CODEOWNERS" ] ||
   ! grep -Fxq '/.github/CODEOWNERS @garethpaul' "$CODEOWNERS" ||
   ! grep -Fxq '/.github/workflows/ @garethpaul' "$CODEOWNERS" ||
   ! grep -Fxq '/Makefile @garethpaul' "$CODEOWNERS" ||
-  ! grep -Fxq '/scripts/check-baseline.sh @garethpaul' "$CODEOWNERS"; then
-  printf '%s\n' "CODEOWNERS must protect itself, the workflow, Makefile, and baseline checker." >&2
+  ! grep -Fxq '/scripts/ @garethpaul' "$CODEOWNERS"; then
+  printf '%s\n' "CODEOWNERS must protect itself, the workflow, Makefile, and verification scripts." >&2
   exit 1
 fi
-
-for make_contract in \
-  'ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' \
-  'ANDROID_SDK := $(if $(ANDROID_HOME),$(ANDROID_HOME),$(ANDROID_SDK_ROOT))'; do
-  if ! grep -Fq "$make_contract" "$ROOT_DIR/Makefile"; then
-    printf '%s\n' "Makefile must keep contract: $make_contract" >&2
-    exit 1
-  fi
-done
 
 if grep -Fq "/home/gjones" "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Makefile must not embed a maintainer-specific Android SDK path." >&2
@@ -584,6 +581,29 @@ fi
 if [ ! -x "$GRADLEW" ] || [ ! -f "$GRADLEW_BAT" ] || \
    [ ! -f "$WRAPPER_JAR" ] || [ ! -f "$WRAPPER_PROPERTIES" ]; then
   printf '%s\n' "Generated Gradle wrapper files must be present and gradlew must be executable." >&2
+  exit 1
+fi
+
+if [ -n "$(find "$ROOT_DIR" -maxdepth 1 \( -name GNUmakefile -o -name makefile \) -print -quit)" ]; then
+  printf '%s\n' "Alternate root makefiles must not shadow the reviewed Makefile." >&2
+  exit 1
+fi
+
+if [ ! -f "$MAKEFILE" ] || [ -L "$MAKEFILE" ] || \
+   [ "$(sha256_file "$MAKEFILE")" != "22e6c79ec6bc991058dcd198bf5062702cfadd582dbeaa77ce07620b0b50fe18" ]; then
+  printf '%s\n' "Makefile must retain the reviewed non-substitutable verification entry point." >&2
+  exit 1
+fi
+
+if [ ! -x "$ANDROID_RUNNER" ] || [ -L "$ANDROID_RUNNER" ] || \
+   [ "$(sha256_file "$ANDROID_RUNNER")" != "fe4d3c94fb20fcb015b5a2c4ba91b0e331f112c908d1546b7ce91beed649da9d" ]; then
+  printf '%s\n' "Android verification must retain the reviewed exact wrapper and SDK runner." >&2
+  exit 1
+fi
+
+if [ ! -x "$PUBLICATION_GATE_TESTS" ] || [ -L "$PUBLICATION_GATE_TESTS" ] || \
+   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "cd219e9f48bbcfcff446e5235ec54966fd25bf4f74b2e501a3b9c4a906ecd964" ]; then
+  printf '%s\n' "Publication-gate mutation tests must retain the reviewed contract." >&2
   exit 1
 fi
 

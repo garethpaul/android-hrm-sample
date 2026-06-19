@@ -1,4 +1,4 @@
 /.github/CODEOWNERS @garethpaul
 /.github/workflows/ @garethpaul
 /Makefile @garethpaul
-/scripts/check-baseline.sh @garethpaul
+/scripts/ @garethpaul

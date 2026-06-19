@@ -36,5 +36,8 @@ jobs:
           distribution: corretto
           java-version: "8"
 
-      - name: Run full verification
-        run: make check
+      - name: Test publication-gate integrity
+        run: ./scripts/test-publication-gate.sh
+
+      - name: Run authenticated Android verification
+        run: ./scripts/run-android-verification.sh
