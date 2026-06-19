@@ -123,7 +123,7 @@ mkdir "$BUILD_ROOT"
 
 if ! (
   cd "$BUILD_ROOT"
-  "$BUILD_ROOT/gradlew" --no-daemon --console plain clean lint check assembleDebug
+  "$BUILD_ROOT/gradlew" --no-daemon --no-color clean lint check assembleDebug
 ) >"$BUILD_LOG" 2>&1; then
   cat "$BUILD_LOG" >&2
   exit 1
