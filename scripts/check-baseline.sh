@@ -95,6 +95,7 @@ jobs:
       - name: Run authenticated Android verification
         env:
           EXPECTED_COMMIT: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_TOOL_CACHE: ${{ runner.tool_cache }}
         run: ./scripts/run-android-verification.sh
 
       - name: Test publication-gate integrity
@@ -654,13 +655,13 @@ for unreviewed_gradle_entry in \
 done
 
 if [ ! -x "$ANDROID_RUNNER" ] || [ -L "$ANDROID_RUNNER" ] || \
-   [ "$(sha256_file "$ANDROID_RUNNER")" != "33a7262b70ae73e16733980c76c06c6c89666040147e2a4e5736352513fb080f" ]; then
+   [ "$(sha256_file "$ANDROID_RUNNER")" != "2988e1aefb23dc2788db6c8f622d315ca35f4af832a3a3ad38c7411379f124e0" ]; then
   printf '%s\n' "Android verification must retain the reviewed exact wrapper and SDK runner." >&2
   exit 1
 fi
 
 if [ ! -x "$PUBLICATION_GATE_TESTS" ] || [ -L "$PUBLICATION_GATE_TESTS" ] || \
-   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "24c35b0d61d270802e6569251a9e2f4ef993a82137a6053b8ff11fcb2ff9d795" ]; then
+   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "32a76765bb12af3e8b4ec07c60635d55cbcb2cccfbaf938281486b26096f58ab" ]; then
   printf '%s\n' "Publication-gate mutation tests must retain the reviewed contract." >&2
   exit 1
 fi
@@ -671,7 +672,7 @@ if [ ! -x "$ARCHIVE_VERIFIER" ] || [ -L "$ARCHIVE_VERIFIER" ] || \
   exit 1
 fi
 
-if ! grep -Fxq 'APPROVED_RUNNER_SHA256=33a7262b70ae73e16733980c76c06c6c89666040147e2a4e5736352513fb080f' "$PUBLICATION_GATE_TESTS"; then
+if ! grep -Fxq 'APPROVED_RUNNER_SHA256=2988e1aefb23dc2788db6c8f622d315ca35f4af832a3a3ad38c7411379f124e0' "$PUBLICATION_GATE_TESTS"; then
   printf '%s\n' "Publication-gate tests must independently pin the reviewed Android runner." >&2
   exit 1
 fi

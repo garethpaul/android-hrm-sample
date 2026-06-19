@@ -52,7 +52,7 @@ if [ "${GITHUB_ACTIONS:-}" != "true" ] || \
   exit 1
 fi
 
-if [ "${RUNNER_TOOL_CACHE:-}" != "/opt/hostedtoolcache" ] || \
+if [ "${EXPECTED_TOOL_CACHE:-}" != "/opt/hostedtoolcache" ] || \
    [ -z "${JAVA_HOME:-}" ] || [ -z "${JAVA_HOME_8_X64:-}" ]; then
   printf '%s\n' "Hosted Java must come from the pinned Corretto toolcache." >&2
   exit 1
@@ -61,7 +61,7 @@ fi
 JAVA_ROOT=$(readlink -f "$JAVA_HOME")
 JAVA_8_ROOT=$(readlink -f "$JAVA_HOME_8_X64")
 case "$JAVA_ROOT" in
-  /opt/hostedtoolcache/Java_Corretto_jdk/8.*/x64) ;;
+  "$EXPECTED_TOOL_CACHE"/Java_Corretto_jdk/8.*/x64) ;;
   *)
     printf '%s\n' "Hosted Java must come from the pinned Corretto toolcache." >&2
     exit 1
