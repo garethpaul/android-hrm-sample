@@ -40,7 +40,6 @@ jobs:
       - name: Run authenticated Android verification
         env:
           EXPECTED_COMMIT: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          EXPECTED_TOOL_CACHE: ${{ runner.tool_cache }}
         run: ./scripts/run-android-verification.sh
 
       - name: Test publication-gate integrity

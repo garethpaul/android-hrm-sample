@@ -3,7 +3,7 @@ set -eu
 
 SOURCE_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
 
-unset ANDROID_SDK GRADLE GRADLE_OPTS GNUMAKEFLAGS JAVA_OPTS JAVA_TOOL_OPTIONS MAKEFLAGS MAKEFILES MFLAGS _JAVA_OPTIONS
+unset ANDROID_SDK CLASSPATH GRADLE GRADLE_OPTS GNUMAKEFLAGS JAVA_OPTS JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS MAKEFLAGS MAKEFILES MFLAGS _JAVA_OPTIONS
 unset GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_CEILING_DIRECTORIES GIT_COMMON_DIR GIT_CONFIG_COUNT GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM GIT_CONFIG_SYSTEM GIT_DIR GIT_DISCOVERY_ACROSS_FILESYSTEM GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_WORK_TREE
 
 if [ -z "${EXPECTED_COMMIT:-}" ]; then
@@ -52,30 +52,13 @@ if [ "${GITHUB_ACTIONS:-}" != "true" ] || \
   exit 1
 fi
 
-if [ "${EXPECTED_TOOL_CACHE:-}" != "/opt/hostedtoolcache" ] || \
-   [ -z "${JAVA_HOME:-}" ] || [ -z "${JAVA_HOME_8_X64:-}" ]; then
-  printf '%s\n' "Hosted Java must come from the pinned Corretto toolcache." >&2
+if [ -z "${JAVA_HOME:-}" ] || [ ! -x "$JAVA_HOME/bin/java" ]; then
+  printf '%s\n' "The pinned setup-java step must provision Java 8." >&2
   exit 1
 fi
 
-JAVA_ROOT=$(readlink -f "$JAVA_HOME")
-JAVA_8_ROOT=$(readlink -f "$JAVA_HOME_8_X64")
-case "$JAVA_ROOT" in
-  "$EXPECTED_TOOL_CACHE"/Java_Corretto_jdk/8.*/x64) ;;
-  *)
-    printf '%s\n' "Hosted Java must come from the pinned Corretto toolcache." >&2
-    exit 1
-    ;;
-esac
-
-if [ "$JAVA_ROOT" != "$JAVA_8_ROOT" ] || \
-   [ ! -x "$JAVA_ROOT/bin/java" ]; then
-  printf '%s\n' "Hosted Java must come from the pinned Corretto toolcache." >&2
-  exit 1
-fi
-
-if ! "$JAVA_ROOT/bin/java" -version 2>&1 | grep -Eq 'Corretto-8([ .]|$)'; then
-  printf '%s\n' "The hosted Android verification gate requires Amazon Corretto 8." >&2
+if ! "$JAVA_HOME/bin/java" -version 2>&1 | grep -Eq 'version "1\.8\.|openjdk version "1\.8\.'; then
+  printf '%s\n' "The pinned setup-java step must provision Java 8." >&2
   exit 1
 fi
 
@@ -97,12 +80,9 @@ if [ ! -f "$SDK_ROOT/platforms/android-22/android.jar" ] || \
   exit 1
 fi
 
-PATH="$JAVA_ROOT/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export PATH
-JAVA_HOME="$JAVA_ROOT"
 ANDROID_HOME="$SDK_ROOT"
 ANDROID_SDK_ROOT="$SDK_ROOT"
-export JAVA_HOME ANDROID_HOME ANDROID_SDK_ROOT
+export ANDROID_HOME ANDROID_SDK_ROOT
 
 TEMP_ROOT=$(mktemp -d "${RUNNER_TEMP:-/tmp}/android-hrm-verification.XXXXXX")
 trap 'rm -rf "$TEMP_ROOT"' EXIT HUP INT TERM

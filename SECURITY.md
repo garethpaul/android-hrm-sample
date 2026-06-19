@@ -36,7 +36,9 @@ Helpful reports include:
   exact Android runner with the hosted API 22 SDK and Java 8 toolchain.
 - The pinned GitHub Actions `Check` workflow is the only supported authenticated
   publication gate. It runs the exact runner before repository-controlled tests,
-  binds the clean Git tree and Corretto toolcache, and builds a fresh commit archive.
+  binds the clean Git tree, and builds a fresh commit archive. The GitHub-hosted
+  runner and pinned `actions/setup-java` step are external CI trust assumptions.
+  Repository code does not independently authenticate JDK bytes.
 - Make is unsupported because flags can suppress recipes or failures before
   repository code executes.
 - The baseline pins and verifies the wrapper JAR and Gradle distribution checksums.

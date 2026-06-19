@@ -71,7 +71,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - The pinned GitHub Actions `Check` workflow is the only supported authenticated
   publication-gate entry point. It invokes `./scripts/run-android-verification.sh`
   before any repository-controlled test step.
-- The runner requires GitHub's Ubuntu 24.04 Corretto 8 toolcache, a clean exact
+- The GitHub-hosted Ubuntu 24.04 runner and pinned `actions/setup-java` Corretto 8
+  step are external CI trust assumptions. Repository code does not independently authenticate JDK bytes. The runner requires a clean exact
   reviewed Git tree and index, and verifies that its fresh archive matches every
   tracked blob, mode, symlink, and path in that reviewed commit.
 - Make is unsupported and fails while parsing. Caller-controlled Make flags can
