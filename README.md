@@ -17,7 +17,7 @@ This README is based on the checked-in source, manifests, scripts, and repositor
 ## Repository Contents
 
 - `README.md` - project overview and local usage notes
-- `.github/workflows/check.yml` - CI baseline that runs the root Make gate
+- `.github/workflows/check.yml` - the supported authenticated publication gate
 - `build.gradle` - Android or Gradle build configuration
 - `.google` - source or example code
 - `Application` - source or example code
@@ -68,8 +68,16 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 ## Testing and Verification
 
-- `make check` - runs the source baseline and Android SDK-backed Gradle checks
-  when `ANDROID_HOME` or `ANDROID_SDK_ROOT` is configured
+- The pinned GitHub Actions `Check` workflow is the only supported authenticated
+  publication-gate entry point. It invokes `./scripts/run-android-verification.sh`
+  before any repository-controlled test step.
+- The GitHub-hosted Ubuntu 24.04 runner and pinned `actions/setup-java` Corretto 8
+  step are external CI trust assumptions. Repository code does not independently authenticate JDK bytes. The runner requires a clean exact
+  reviewed Git tree and index, and verifies that its fresh archive matches every
+  tracked blob, mode, symlink, and path in that reviewed commit.
+- Make is unsupported and fails while parsing. Caller-controlled Make flags can
+  otherwise skip recipes, ignore failures, replace the shell, or select another
+  makefile.
 - `scripts/check-baseline.sh` - runs SDK-free HRM sample baseline checks.
 - The SDK-free baseline protects GATT property checks, BLE address validation,
   scan timeout cleanup, heart-rate characteristic matching, and resource lint
@@ -78,10 +86,10 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   or the Bluetooth manager service is unavailable.
 - `./gradlew lint --no-daemon`, `./gradlew check --no-daemon`, and `./gradlew assembleDebug --no-daemon` when the Android SDK is configured.
 - The canonical GitHub Actions workflow installs Android API 22 and build-tools
-  24.0.3, selects Java 8, and runs full `make check` on pushes and pull
-  requests using Ubuntu 24.04 with superseded-run cancellation.
-- Local Gradle checks accept `ANDROID_HOME` or `ANDROID_SDK_ROOT` and match the
-  hosted toolchain contract.
+  24.0.3, selects Java 8, checks out the reviewed pull-request head, and invokes
+  the exact runner on Ubuntu 24.04 with superseded-run cancellation.
+- Local checks are not authenticated publication evidence. Maintainers may run
+  the SDK-free baseline and direct Gradle commands for development feedback.
 
 The legacy plugin uses its non-queued PNG cruncher because the concurrent
 cruncher can fail nondeterministically on clean hosted builds. BLE behavior
@@ -115,6 +123,11 @@ evidence, and explicit unexecuted rows.
   services before requesting a Bluetooth adapter.
 - BLE scan lifecycle guards nullable Bluetooth adapters, handlers, stopped list
   adapters, and null scan callback devices.
+- BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
+- Scan-session generations reject callbacks queued by stopped or replaced
+  scans, and clicked rows must still match their rendered Bluetooth address.
+- Legacy Android 6 BLE scans declare coarse-location access; missing or revoked
+  Bluetooth scan permissions fail closed with generic UI diagnostics.
 - BLE scans must enter the scanning state and schedule timeout cleanup only after Android reports that scan startup succeeded.
 - BLE scanning must wait until the enable-Bluetooth system flow returns with an enabled adapter.
 - Scan and GATT control activities guard nullable ActionBar setup before
@@ -130,8 +143,9 @@ evidence, and explicit unexecuted rows.
   unavailable.
 - GATT connection callbacks ignore stale instances, reject failed status
   transitions, and start discovery through the active callback object.
-- Replacement GATT connections close the previously owned GATT only after a
-  new platform connection object is created successfully.
+- Replacement GATT connections close the previously owned GATT exactly once
+  after atomically replacing current ownership; stale callbacks cannot release
+  the replacement connection.
 - GATT service, read, and notification callbacks reject stale GATT instances
   before publishing discovered services or sensor data.
 - Heart-rate parsing reads the format flag from measurement byte zero and
@@ -177,6 +191,8 @@ evidence, and explicit unexecuted rows.
   startup service guard.
 - See `docs/plans/2026-06-09-hrm-scan-lifecycle-guards.md` for BLE scan
   lifecycle and callback null guards.
+- See `docs/plans/2026-06-17-hrm-scan-list-selection-guards.md` for stale scan
+  list selection guards.
 - See `docs/plans/2026-06-09-hrm-broadcast-privacy.md` for the package-scoped
   GATT broadcast and heart-rate logging contract.
 - See `docs/plans/2026-06-09-hrm-data-field-guard.md` for GATT data-field

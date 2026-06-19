@@ -28,7 +28,8 @@ unexecuted rows. Do not convert `not run` into passing evidence.
 | Select discovered sensor | One device-control flow receives a valid address. | not run | |
 | Connect and discover | Current GATT publishes services only after success. | not run | |
 | Service unavailable | UI actions remain guarded until binding succeeds. | not run | |
-| Replacement sensor | Prior GATT closes before new ownership is published. | not run | |
+| Replacement sensor | Prior GATT closes exactly once and cannot release replacement ownership. | not run | |
+| Revoked scan permission | Scan fails closed with a generic diagnostic and no crash. | not run | |
 
 ## Heart-Rate Notification Matrix
 
@@ -50,6 +51,7 @@ unexecuted rows. Do not convert `not run` into passing evidence.
 | Disconnect during discovery | Current connection clears without stale data. | not run | |
 | Rapid disconnect/reconnect | Callbacks from replaced GATT are ignored. | not run | |
 | Pause during scan | Scan callbacks stop after lifecycle cleanup. | not run | |
+| Stop then immediately rescan | Queued callbacks from the prior generation are ignored. | not run | |
 | Rotate while connected | Recreated activity uses only the current service/GATT state. | not run | |
 | Sensor leaves range | UI reports disconnect without leaking identifiers. | not run | |
 

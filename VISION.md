@@ -27,6 +27,7 @@ Priority:
 - BLE scans must enter the scanning state and schedule timeout cleanup only after Android reports that scan startup succeeded.
 - BLE scanning must wait until the enable-Bluetooth system flow returns with an enabled adapter.
 - Keep scan lifecycle callbacks safe after startup failure or pause cleanup
+- BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
 - Keep heart-rate characteristic matching tied to standard GATT UUIDs
 - Parse heart-rate format flags from measurement data and reject truncated
   packets safely
@@ -44,8 +45,11 @@ Priority:
 - Fail closed when Android rejects a GATT service discovery start
 - Terminate the current connection after a failed GATT service discovery callback
 - Keep GATT state and heart-rate events on an in-process local broadcast channel
-- Replacement GATT connections close the previously owned GATT before
-  publishing new connection ownership
+- Replacement GATT connections close the previously owned GATT exactly once
+  after atomically publishing new connection ownership
+- Reject callbacks from stopped scan generations and verify clicked-row device
+  identity before navigation
+- Fail closed when Bluetooth state or scan permission checks throw
 - Keep scan and control activity startup safe when legacy ActionBar presentation
   is unavailable
 - Keep GATT data-field updates safe when stale control layouts omit views
