@@ -20,6 +20,7 @@ import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.util.Log;
 
 import java.util.ArrayList;
 
@@ -27,10 +28,13 @@ import java.util.ArrayList;
  * Activity for scanning and displaying available Bluetooth LE devices.
  */
 public class DeviceScanActivity extends ListActivity {
+    private static final String TAG = DeviceScanActivity.class.getSimpleName();
     private LeDeviceListAdapter mLeDeviceListAdapter;
     private BluetoothAdapter mBluetoothAdapter;
     private boolean mScanning;
     private Handler mHandler;
+    private final CallbackGeneration mScanGeneration = new CallbackGeneration();
+    private BluetoothAdapter.LeScanCallback mLeScanCallback;
 
     private static final int REQUEST_ENABLE_BT = 1;
     // Stops scanning after 10 seconds.
@@ -38,11 +42,7 @@ public class DeviceScanActivity extends ListActivity {
     private final Runnable mStopScanRunnable = new Runnable() {
         @Override
         public void run() {
-            mScanning = false;
-            if (mBluetoothAdapter != null) {
-                mBluetoothAdapter.stopLeScan(mLeScanCallback);
-            }
-            invalidateOptionsMenu();
+            scanLeDevice(false);
         }
     };
 
@@ -131,7 +131,17 @@ public class DeviceScanActivity extends ListActivity {
 
         // Ensures Bluetooth is enabled on the device.  If Bluetooth is not currently enabled,
         // fire an intent to display a dialog asking the user to grant permission to enable it.
-        if (!mBluetoothAdapter.isEnabled()) {
+        final boolean bluetoothEnabled;
+        try {
+            bluetoothEnabled = mBluetoothAdapter.isEnabled();
+        } catch (SecurityException securityException) {
+            Log.w(TAG, "Bluetooth state permission is unavailable.");
+            Toast.makeText(this, com.garethpaul.app.hrm.R.string.scan_start_failed,
+                    Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+        if (!bluetoothEnabled) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
             return;
@@ -169,10 +179,16 @@ public class DeviceScanActivity extends ListActivity {
         }
 
         final BluetoothDevice device = mLeDeviceListAdapter.getDevice(position);
-        if (device == null) return;
+        if (device == null || !(v.getTag() instanceof ViewHolder)) return;
+        final String deviceAddress = device.getAddress();
+        final ViewHolder viewHolder = (ViewHolder) v.getTag();
+        if (!BluetoothAdapter.checkBluetoothAddress(deviceAddress) ||
+                !deviceAddress.equals(viewHolder.boundDeviceAddress)) {
+            return;
+        }
         final Intent intent = new Intent(this, DeviceControlActivity.class);
         intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_NAME, device.getName());
-        intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_ADDRESS, device.getAddress());
+        intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_ADDRESS, deviceAddress);
         if (mScanning) {
             scanLeDevice(false);
         }
@@ -187,11 +203,22 @@ public class DeviceScanActivity extends ListActivity {
         if (enable) {
             // Stops scanning after a pre-defined scan period.
             mHandler.removeCallbacks(mStopScanRunnable);
-            boolean scanStarted = mBluetoothAdapter.startLeScan(mLeScanCallback);
+            final long generation = mScanGeneration.advance();
+            final BluetoothAdapter.LeScanCallback scanCallback =
+                    createLeScanCallback(generation);
+            boolean scanStarted = false;
+            try {
+                scanStarted = mBluetoothAdapter.startLeScan(scanCallback);
+            } catch (SecurityException securityException) {
+                Log.w(TAG, "Bluetooth scan permission is unavailable.");
+            }
             if (scanStarted) {
+                mLeScanCallback = scanCallback;
                 mScanning = true;
                 mHandler.postDelayed(mStopScanRunnable, SCAN_PERIOD);
             } else {
+                mScanGeneration.invalidate();
+                mLeScanCallback = null;
                 mScanning = false;
                 Toast.makeText(this, com.garethpaul.app.hrm.R.string.scan_start_failed,
                         Toast.LENGTH_SHORT).show();
@@ -199,7 +226,16 @@ public class DeviceScanActivity extends ListActivity {
         } else {
             mHandler.removeCallbacks(mStopScanRunnable);
             mScanning = false;
-            mBluetoothAdapter.stopLeScan(mLeScanCallback);
+            mScanGeneration.invalidate();
+            final BluetoothAdapter.LeScanCallback scanCallback = mLeScanCallback;
+            mLeScanCallback = null;
+            if (scanCallback != null) {
+                try {
+                    mBluetoothAdapter.stopLeScan(scanCallback);
+                } catch (SecurityException securityException) {
+                    Log.w(TAG, "Bluetooth scan stop permission is unavailable.");
+                }
+            }
         }
         invalidateOptionsMenu();
     }
@@ -274,21 +310,23 @@ public class DeviceScanActivity extends ListActivity {
             else
                 viewHolder.deviceName.setText(com.garethpaul.app.hrm.R.string.unknown_device);
             viewHolder.deviceAddress.setText(device.getAddress());
+            viewHolder.boundDeviceAddress = device.getAddress();
 
             return view;
         }
     }
 
     // Device scan callback.
-    private BluetoothAdapter.LeScanCallback mLeScanCallback =
-            new BluetoothAdapter.LeScanCallback() {
+    private BluetoothAdapter.LeScanCallback createLeScanCallback(final long generation) {
+        return new BluetoothAdapter.LeScanCallback() {
 
         @Override
         public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (mLeDeviceListAdapter == null || device == null) {
+                    if (!mScanning || !mScanGeneration.isCurrent(generation) ||
+                            mLeDeviceListAdapter == null || device == null) {
                         return;
                     }
 
@@ -297,10 +335,12 @@ public class DeviceScanActivity extends ListActivity {
                 }
             });
         }
-    };
+        };
+    }
 
     static class ViewHolder {
         TextView deviceName;
         TextView deviceAddress;
+        String boundDeviceAddress;
     }
 }

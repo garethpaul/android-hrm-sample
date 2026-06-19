@@ -1,5 +1,19 @@
 # Changes
 
+## 2026-06-19
+
+- Added scan-session generations so callbacks queued by stopped or replaced
+  scans cannot populate the current device list.
+- Bound scan-row selection to the address rendered in the clicked row and
+  rejected unavailable Bluetooth permissions without crashing scan lifecycle
+  paths.
+- Added Android 6-compatible coarse-location declaration for legacy BLE scans.
+- Made GATT ownership atomic across replacement, callback failure, disconnect,
+  descriptor rollback, and repeated close paths so stale callbacks cannot
+  release or mutate a replacement connection.
+- Added focused Java state-machine tests, source contracts, and nine hostile
+  mutations without executing an unverified wrapper.
+
 ## 2026-06-17
 
 - BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
@@ -20,8 +34,8 @@
 - Stopped failed Bluetooth initialization before attempting a GATT connection.
 - Moved GATT state and heart-rate events to an in-process local broadcast
   channel so external applications cannot spoof or observe those updates.
-- Replacement GATT connections close the previously owned GATT after successful
-  replacement creation and before publishing the new connection.
+- Replacement GATT connections close the previously owned GATT exactly once
+  after atomically replacing current ownership.
 - Added an exact-commit HRM device verification matrix for scan, GATT ownership,
   notifications, descriptor rollback, measurements, lifecycle races, and
   privacy-safe evidence, with every runtime row explicitly unexecuted.

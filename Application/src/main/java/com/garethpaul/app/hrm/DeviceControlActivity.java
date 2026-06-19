@@ -90,6 +90,7 @@ public class DeviceControlActivity extends Activity {
                 invalidateOptionsMenu();
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 mConnected = false;
+                clearGattSelectionState();
                 updateConnectionState(R.string.disconnected);
                 invalidateOptionsMenu();
                 clearUI();
@@ -158,6 +159,11 @@ public class DeviceControlActivity extends Activity {
             mDataField.setText(com.garethpaul.app
                     .hrm.R.string.no_data);
         }
+    }
+
+    private void clearGattSelectionState() {
+        mNotifyCharacteristic = null;
+        mGattCharacteristics = new ArrayList<ArrayList<BluetoothGattCharacteristic>>();
     }
 
     @Override
@@ -286,6 +292,7 @@ public class DeviceControlActivity extends Activity {
     // In this sample, we populate the data structure that is bound to the ExpandableListView
     // on the UI.
     private void displayGattServices(List<BluetoothGattService> gattServices) {
+        clearGattSelectionState();
         if (gattServices == null) return;
         String uuid = null;
         String unknownServiceString = getResources().getString(com.garethpaul.app.hrm.R.string.unknown_service);

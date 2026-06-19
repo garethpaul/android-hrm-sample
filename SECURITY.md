@@ -22,9 +22,9 @@ Helpful reports include:
   disconnection, closing the owned connection, and releasing its reference.
 - A failed GATT service discovery callback clears pending descriptor state,
   publishes disconnection, and releases the current connection.
-- Replacement GATT connections close the previously owned GATT before the new
-  object becomes authoritative, while failed replacement creation preserves
-  current ownership.
+- Replacement GATT connections close the previously owned GATT exactly once
+  after atomic ownership replacement, while failed creation preserves current
+  ownership.
 
 - the affected file, endpoint, permission, dependency, or workflow
 - a concise impact statement explaining what an attacker could do
@@ -45,6 +45,10 @@ Helpful reports include:
 - Stale GATT selection callbacks fail closed before indexing mutable
   characteristic groups or using an unavailable BLE service.
 - BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
+- Scan callbacks carry session generations, and recycled list rows must retain
+  the selected device address before navigation.
+- Missing Bluetooth state or scan permissions fail closed; legacy Android 6
+  scanning declares coarse-location access.
 - Bluetooth service binding ownership is explicit so failed binding and
   service-dependent activity actions do not trigger unowned unbinds or null
   service dereferences.
@@ -54,16 +58,25 @@ Helpful reports include:
   generic diagnostics and without exposing BLE identifiers or values.
 - Asynchronous descriptor write failures roll back local notification state
   only after the active GATT and pending descriptor identities match.
+- GATT terminal callbacks release only their exact owned connection, and close
+  remains idempotent across callback, activity teardown, and replacement races.
 - GATT connection, discovery, and heart-rate events use an in-process local
   broadcast channel instead of accepting or publishing framework broadcasts.
-- Pinned, read-only GitHub Actions runs the root `make check` baseline without
-  inheriting hosted Android SDK state.
+- Pinned, read-only GitHub Actions checks out the reviewed head and invokes the
+  exact Android runner with the hosted API 22 SDK and Java 8 toolchain.
+- The pinned GitHub Actions `Check` workflow is the only supported authenticated
+  publication gate. It runs the exact runner before repository-controlled tests,
+  binds the clean Git tree, and builds a fresh commit archive. The GitHub-hosted
+  runner and pinned `actions/setup-java` step are external CI trust assumptions.
+  Repository code does not independently authenticate JDK bytes.
+- Make is unsupported because flags can suppress recipes or failures before
+  repository code executes.
 - The baseline pins and verifies the wrapper JAR and Gradle distribution checksums.
   An uncached bootstrap still depends on Gradle's HTTPS service, so these
   integrity controls do not provide offline reproducibility.
 - Hosted checkout credentials are not persisted. Self-protecting CODEOWNERS
-  assigns the workflow, Makefile, and baseline checker to the repository owner;
-  repository rules should require that approval.
+  assigns every publication-gate trust root to the repository owner; repository
+  rules should require that approval.
 - `check.yml` remains the only approved workflow until another workflow
   receives an explicit least-privilege security contract.
 - The explicit HRM component export boundary keeps the launcher activity

@@ -1,4 +1,11 @@
 /.github/CODEOWNERS @garethpaul
 /.github/workflows/ @garethpaul
 /Makefile @garethpaul
-/scripts/check-baseline.sh @garethpaul
+/build.gradle @garethpaul
+/settings.gradle @garethpaul
+/Application/build.gradle @garethpaul
+/Application/lint.xml @garethpaul
+/gradlew @garethpaul
+/gradlew.bat @garethpaul
+/gradle/wrapper/ @garethpaul
+/scripts/ @garethpaul

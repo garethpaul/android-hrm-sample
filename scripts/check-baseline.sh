@@ -36,6 +36,13 @@ GRADLEW="$ROOT_DIR/gradlew"
 GRADLEW_BAT="$ROOT_DIR/gradlew.bat"
 WRAPPER_JAR="$ROOT_DIR/gradle/wrapper/gradle-wrapper.jar"
 WRAPPER_PROPERTIES="$ROOT_DIR/gradle/wrapper/gradle-wrapper.properties"
+MAKEFILE="$ROOT_DIR/Makefile"
+ANDROID_RUNNER="$ROOT_DIR/scripts/run-android-verification.sh"
+PUBLICATION_GATE_TESTS="$ROOT_DIR/scripts/test-publication-gate.sh"
+ARCHIVE_VERIFIER="$ROOT_DIR/scripts/verify-archive-tree.py"
+ROOT_BUILD_FILE="$ROOT_DIR/build.gradle"
+SETTINGS_FILE="$ROOT_DIR/settings.gradle"
+LINT_CONFIG="$ROOT_DIR/Application/lint.xml"
 
 for required_path in \
   "$ROOT_DIR/DEVICE_VERIFICATION.md" \
@@ -53,7 +60,8 @@ for required_path in \
 done
 
 for deferred_scan_contract in \
-  'if (!mBluetoothAdapter.isEnabled()) {' \
+  'bluetoothEnabled = mBluetoothAdapter.isEnabled();' \
+  'if (!bluetoothEnabled) {' \
   'Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);' \
   'startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);'; do
   if ! grep -Fq "$deferred_scan_contract" "$SCAN_ACTIVITY"; then
@@ -65,7 +73,7 @@ done
 disabled_check_count=$(awk '
   /protected void onResume\(\)/ { in_resume = 1 }
   in_resume && /protected void onActivityResult/ { in_resume = 0 }
-  in_resume && /if \(!mBluetoothAdapter\.isEnabled\(\)\)/ { count++ }
+  in_resume && /if \(!bluetoothEnabled\)/ { count++ }
   END { print count + 0 }
 ' "$SCAN_ACTIVITY")
 if [ "$disabled_check_count" -ne 1 ]; then
@@ -75,7 +83,7 @@ fi
 
 if ! awk '
   /protected void onResume\(\)/ { in_resume = 1 }
-  in_resume && /if \(!mBluetoothAdapter\.isEnabled\(\)\)/ { disabled = NR }
+  in_resume && /if \(!bluetoothEnabled\)/ { disabled = NR }
   in_resume && /startActivityForResult\(enableBtIntent, REQUEST_ENABLE_BT\);/ { request = NR }
   in_resume && request && /return;/ && !early_return { early_return = NR }
   in_resume && /mLeDeviceListAdapter = new LeDeviceListAdapter\(\);/ { adapter = NR }
@@ -128,7 +136,7 @@ for deferred_scan_plan_contract in \
 done
 
 for scan_start_contract in \
-  "boolean scanStarted = mBluetoothAdapter.startLeScan(mLeScanCallback);" \
+  "scanStarted = mBluetoothAdapter.startLeScan(scanCallback);" \
   "if (scanStarted) {" \
   "Toast.makeText(this, com.garethpaul.app.hrm.R.string.scan_start_failed"; do
   if ! grep -Fq "$scan_start_contract" "$SCAN_ACTIVITY"; then
@@ -139,7 +147,7 @@ done
 
 if ! awk '
   /private void scanLeDevice\(final boolean enable\)/ { in_scan = 1 }
-  in_scan && /boolean scanStarted = mBluetoothAdapter\.startLeScan/ { start_call = NR }
+  in_scan && /scanStarted = mBluetoothAdapter\.startLeScan/ { start_call = NR }
   in_scan && /if \(scanStarted\)/ { success_branch = NR }
   in_scan && /mScanning = true;/ { scanning = NR }
   in_scan && /mHandler\.postDelayed\(mStopScanRunnable, SCAN_PERIOD\);/ { timeout = NR }
@@ -304,6 +312,7 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Install Android SDK packages
         run: '"${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-22" "build-tools;24.0.3"'
@@ -314,8 +323,19 @@ jobs:
           distribution: corretto
           java-version: "8"
 
-      - name: Run full verification
-        run: make check
+      - name: Run authenticated Android verification
+        env:
+          EXPECTED_COMMIT: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: ./scripts/run-android-verification.sh
+
+      - name: Run BLE session guard tests
+        run: ./scripts/test-ble-session-guards.sh
+
+      - name: Run BLE hostile mutation tests
+        run: ./scripts/test-ble-mutations.sh
+
+      - name: Test publication-gate integrity
+        run: ./scripts/test-publication-gate.sh
 EOF
 }
 
@@ -414,106 +434,7 @@ for pattern in \
   fi
 done
 
-NOTIFICATION_METHOD=$(sed -n \
-  '/public void setCharacteristicNotification/,/^    }/p' \
-  "$BLE_SERVICE")
-NOTIFICATION_COMPACT=$(printf '%s\n' "$NOTIFICATION_METHOD" | tr -d '[:space:]')
-NOTIFICATION_BEFORE_REGISTRATION=${NOTIFICATION_COMPACT%%booleannotificationSet=*}
-NOTIFICATION_BEFORE_DESCRIPTOR=${NOTIFICATION_COMPACT%%BluetoothGattDescriptordescriptor=*}
-NOTIFICATION_BEFORE_VALUE=${NOTIFICATION_COMPACT%%byte[]descriptorValue=*}
-
-for notification_registration_contract in \
-  'booleannotificationSet=mBluetoothGatt.setCharacteristicNotification(characteristic,enabled);' \
-  'if(!notificationSet){Log.w(TAG,"UnabletosetlocalGATTnotificationstate.");return;}'; do
-  if ! printf '%s\n' "$NOTIFICATION_BEFORE_DESCRIPTOR" | \
-      grep -Fq "$notification_registration_contract"; then
-    printf '%s\n' "GATT notification registration must keep pre-descriptor contract: $notification_registration_contract" >&2
-    exit 1
-  fi
-done
-
-if ! printf '%s\n' "$NOTIFICATION_BEFORE_REGISTRATION" | grep -Fq \
-    'booleanheartRateMeasurement=UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid());if(heartRateMeasurement&&mPendingDescriptorWrite!=null){Log.w(TAG,"Heartratenotificationdescriptorwriteisalreadypending.");return;}'; then
-  printf '%s\n' "GATT pending descriptor guard must precede local notification mutation." >&2
-  exit 1
-fi
-if [ "$NOTIFICATION_BEFORE_VALUE" = "$NOTIFICATION_COMPACT" ]; then
-  printf '%s\n' "GATT pending descriptor guard must precede descriptor value assignment." >&2
-  exit 1
-fi
-
-if [ "$NOTIFICATION_BEFORE_DESCRIPTOR" = "$NOTIFICATION_COMPACT" ]; then
-  printf '%s\n' "GATT notification registration guard must precede descriptor lookup." >&2
-  exit 1
-fi
-
-ROLLBACK_METHOD=$(sed -n \
-  '/private void rollbackCharacteristicNotification/,/^    }/p' \
-  "$BLE_SERVICE")
-ROLLBACK_COMPACT=$(printf '%s\n' "$ROLLBACK_METHOD" | tr -d '[:space:]')
-DESCRIPTOR_CALLBACK=$(sed -n \
-  '/public void onDescriptorWrite/,/^        }/p' \
-  "$BLE_SERVICE")
-DESCRIPTOR_CALLBACK_COMPACT=$(printf '%s\n' "$DESCRIPTOR_CALLBACK" | tr -d '[:space:]')
-CLEAR_DESCRIPTOR_METHOD=$(sed -n \
-  '/private void clearPendingDescriptorWrite/,/^    }/p' \
-  "$BLE_SERVICE")
-CLEAR_DESCRIPTOR_COMPACT=$(printf '%s\n' "$CLEAR_DESCRIPTOR_METHOD" | tr -d '[:space:]')
-for descriptor_rollback_contract in \
-  'if(descriptor==null){Log.w(TAG,"Heartratenotificationdescriptorismissing.");rollbackCharacteristicNotification(characteristic,enabled);return;}' \
-  'booleandescriptorValueSet=descriptor.setValue(descriptorValue);if(!descriptorValueSet){Log.w(TAG,"Unabletosetheartratenotificationdescriptorvalue.");rollbackCharacteristicNotification(characteristic,enabled);return;}' \
-  'booleandescriptorWriteQueued=mBluetoothGatt.writeDescriptor(descriptor);if(!descriptorWriteQueued){Log.w(TAG,"Unabletoqueueheartratenotificationdescriptorwrite.");clearPendingDescriptorWrite();rollbackCharacteristicNotification(characteristic,enabled);}' ; do
-  if ! printf '%s\n' "$NOTIFICATION_COMPACT" | grep -Fq "$descriptor_rollback_contract"; then
-    printf '%s\n' "GATT descriptor failure must keep rollback contract: $descriptor_rollback_contract" >&2
-    exit 1
-  fi
-done
-
-for pending_descriptor_contract in \
-  'privateBluetoothGattDescriptormPendingDescriptorWrite;' \
-  'privateBluetoothGattCharacteristicmPendingNotificationCharacteristic;' \
-  'privatebooleanmPendingNotificationEnabled;' \
-  'if(heartRateMeasurement&&mPendingDescriptorWrite!=null){Log.w(TAG,"Heartratenotificationdescriptorwriteisalreadypending.");return;}' \
-  'mPendingDescriptorWrite=descriptor;mPendingNotificationCharacteristic=characteristic;mPendingNotificationEnabled=enabled;booleandescriptorWriteQueued=mBluetoothGatt.writeDescriptor(descriptor);'; do
-  if ! printf '%s\n' "$(tr -d '[:space:]' < "$BLE_SERVICE")" | grep -Fq "$pending_descriptor_contract"; then
-    printf '%s\n' "GATT descriptor queue must keep pending-operation contract: $pending_descriptor_contract" >&2
-    exit 1
-  fi
-done
-
-for descriptor_callback_contract in \
-  'if(gatt==null||gatt!=mBluetoothGatt){Log.w(TAG,"IgnoringstaleGATTdescriptorcallback.");return;}' \
-  'if(descriptor==null||descriptor!=mPendingDescriptorWrite){Log.w(TAG,"IgnoringunrelatedGATTdescriptorcallback.");return;}' \
-  'BluetoothGattCharacteristiccharacteristic=mPendingNotificationCharacteristic;booleanenabled=mPendingNotificationEnabled;clearPendingDescriptorWrite();if(status!=BluetoothGatt.GATT_SUCCESS&&characteristic!=null){Log.w(TAG,"Heartratenotificationdescriptorwritefailed.");rollbackCharacteristicNotification(characteristic,enabled);}' ; do
-  if ! printf '%s\n' "$DESCRIPTOR_CALLBACK_COMPACT" | grep -Fq "$descriptor_callback_contract"; then
-    printf '%s\n' "GATT descriptor callback must keep ownership and rollback contract: $descriptor_callback_contract" >&2
-    exit 1
-  fi
-done
-
-for clear_descriptor_contract in \
-  'privatevoidclearPendingDescriptorWrite()' \
-  'mPendingDescriptorWrite=null;' \
-  'mPendingNotificationCharacteristic=null;' \
-  'mPendingNotificationEnabled=false;'; do
-  if ! printf '%s\n' "$CLEAR_DESCRIPTOR_COMPACT" | grep -Fq "$clear_descriptor_contract"; then
-    printf '%s\n' "GATT descriptor pending-state cleanup must keep contract: $clear_descriptor_contract" >&2
-    exit 1
-  fi
-done
-if [ "$(grep -Fc 'clearPendingDescriptorWrite();' "$BLE_SERVICE")" -ne 8 ]; then
-  printf '%s\n' "GATT descriptor pending state must clear on completion, queue failure, disconnect, discovery start or callback failure, replacement, and close." >&2
-  exit 1
-fi
-for rollback_helper_contract in \
-  'privatevoidrollbackCharacteristicNotification(BluetoothGattCharacteristiccharacteristic,booleanenabled)' \
-  'booleanrollbackSet=mBluetoothGatt.setCharacteristicNotification(characteristic,!enabled);' \
-  'if(!rollbackSet){Log.w(TAG,"UnabletorollbacklocalGATTnotificationstate.");}'; do
-  if ! printf '%s\n' "$ROLLBACK_COMPACT" | grep -Fq "$rollback_helper_contract"; then
-    printf '%s\n' "GATT descriptor rollback helper must keep contract: $rollback_helper_contract" >&2
-    exit 1
-  fi
-done
+python3 "$ROOT_DIR/scripts/test-ble-source-contracts.py"
 for reflected_descriptor_log in \
   '"Unable to set heart rate notification descriptor value." +' \
   '"Unable to queue heart rate notification descriptor write." +' \
@@ -583,10 +504,10 @@ if ! grep -Fq "BluetoothAdapter.checkBluetoothAddress(address)" "$BLE_SERVICE"; 
 fi
 
 for gatt_connection_contract in \
-  "if (gatt == null || gatt != mBluetoothGatt)" \
+  "if (!mGattOwner.isCurrent(gatt))" \
   "if (status != BluetoothGatt.GATT_SUCCESS)" \
-  "gatt.close();" \
-  "mBluetoothGatt = null;" \
+  "gattToClose = mGattOwner.releaseIfCurrent(gatt);" \
+  "gattToClose.close();" \
   "gatt.discoverServices()" \
   "BluetoothGatt bluetoothGatt = device.connectGatt(this, false, mGattCallback);" \
   "if (bluetoothGatt == null)"; do
@@ -596,30 +517,8 @@ for gatt_connection_contract in \
   fi
 done
 
-if grep -Fq "mBluetoothGatt.discoverServices()" "$BLE_SERVICE"; then
-  printf '%s\n' "GATT callbacks must discover services through their current callback instance." >&2
-  exit 1
-fi
-
-if ! awk '
-  /if \(newState == BluetoothProfile\.STATE_CONNECTED\)/ { in_connected = 1 }
-  in_connected && /broadcastUpdate\(intentAction\);/ { connected = NR }
-  in_connected && /boolean serviceDiscoveryStarted = gatt\.discoverServices\(\);/ { discover = NR }
-  in_connected && /if \(!serviceDiscoveryStarted\)/ { failure = NR }
-  in_connected && failure && /mConnectionState = STATE_DISCONNECTED;/ { state = NR }
-  in_connected && failure && /clearPendingDescriptorWrite\(\);/ { clear_pending = NR }
-  in_connected && failure && /broadcastUpdate\(ACTION_GATT_DISCONNECTED\);/ { disconnected = NR }
-  in_connected && failure && /gatt\.close\(\);/ { close_line = NR }
-  in_connected && failure && /mBluetoothGatt = null;/ {
-    release = NR
-    completed = 1
-    exit !(connected && discover && failure && state && clear_pending && disconnected && close_line && release &&
-      connected < discover && discover < failure && failure < state && state < clear_pending &&
-      clear_pending < disconnected && disconnected < close_line && close_line < release)
-  }
-  END { if (!completed) exit 1 }
-' "$BLE_SERVICE"; then
-  printf '%s\n' "Rejected GATT discovery startup must disconnect and release current ownership." >&2
+if grep -Fq "mBluetoothGatt" "$BLE_SERVICE"; then
+  printf '%s\n' "GATT ownership must not bypass the exact-owner guard." >&2
   exit 1
 fi
 
@@ -642,30 +541,6 @@ for discovery_failure_plan_contract in \
   fi
 done
 
-if ! awk '
-  /public void onServicesDiscovered\(BluetoothGatt gatt, int status\)/ { in_callback = 1 }
-  in_callback && /if \(gatt == null \|\| gatt != mBluetoothGatt\)/ { ownership = NR }
-  in_callback && /if \(status == BluetoothGatt.GATT_SUCCESS\)/ { success = NR }
-  in_callback && /broadcastUpdate\(ACTION_GATT_SERVICES_DISCOVERED\);/ { discovered = NR }
-  in_callback && /Log\.w\(TAG, "onServicesDiscovered received:/ { failure = NR }
-  in_callback && failure && /mConnectionState = STATE_DISCONNECTED;/ { state = NR }
-  in_callback && failure && /clearPendingDescriptorWrite\(\);/ { clear_pending = NR }
-  in_callback && failure && /broadcastUpdate\(ACTION_GATT_DISCONNECTED\);/ { disconnected = NR }
-  in_callback && failure && /gatt\.close\(\);/ { close_line = NR }
-  in_callback && failure && /mBluetoothGatt = null;/ {
-    release = NR
-    completed = 1
-    exit !(ownership && success && discovered && failure && state && clear_pending &&
-      disconnected && close_line && release && ownership < success && success < discovered &&
-      discovered < failure && failure < state && state < clear_pending &&
-      clear_pending < disconnected && disconnected < close_line && close_line < release)
-  }
-  END { if (!completed) exit 1 }
-' "$BLE_SERVICE"; then
-  printf '%s\n' "Failed GATT discovery callbacks must disconnect and release current ownership." >&2
-  exit 1
-fi
-
 for discovery_callback_document in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
   if ! tr '\n' ' ' < "$discovery_callback_document" | tr -s '[:space:]' ' ' | \
       grep -Fiq "failed GATT service discovery callback"; then
@@ -685,40 +560,16 @@ for discovery_callback_plan_contract in \
   fi
 done
 
-SERVICES_CALLBACK=$(sed -n \
-  '/public void onServicesDiscovered/,/public void onCharacteristicRead/p' \
-  "$BLE_SERVICE")
-READ_CALLBACK=$(sed -n \
-  '/public void onCharacteristicRead/,/public void onCharacteristicChanged/p' \
-  "$BLE_SERVICE")
-NOTIFICATION_CALLBACK=$(sed -n \
-  '/public void onCharacteristicChanged/,/    };/p' \
-  "$BLE_SERVICE")
-
-check_callback_ownership() {
-  callback_body=$1
-  callback_log=$2
-  callback_name=$3
-
-  if ! printf '%s\n' "$callback_body" | grep -Fq "if (gatt == null || gatt != mBluetoothGatt)" || \
-     ! printf '%s\n' "$callback_body" | grep -Fq "$callback_log"; then
-    printf '%s\n' "GATT data callback ownership is incomplete for $callback_name." >&2
+for callback_log in \
+  "Ignoring stale GATT services callback." \
+  "Ignoring stale GATT read callback." \
+  "Ignoring stale GATT notification callback." \
+  "Ignoring stale GATT descriptor callback."; do
+  if ! grep -Fq "$callback_log" "$BLE_SERVICE"; then
+    printf '%s\n' "GATT callback ownership log is missing: $callback_log" >&2
     exit 1
   fi
-}
-
-check_callback_ownership \
-  "$SERVICES_CALLBACK" \
-  "Ignoring stale GATT services callback." \
-  "services"
-check_callback_ownership \
-  "$READ_CALLBACK" \
-  "Ignoring stale GATT read callback." \
-  "read"
-check_callback_ownership \
-  "$NOTIFICATION_CALLBACK" \
-  "Ignoring stale GATT notification callback." \
-  "notification"
+done
 
 if [ ! -f "$DATA_CALLBACK_PLAN" ] || \
    ! grep -Fq "Status: Completed" "$DATA_CALLBACK_PLAN" || \
@@ -733,10 +584,10 @@ if ! grep -Fq "if (bluetoothManager == null)" "$SCAN_ACTIVITY"; then
 fi
 
 for pattern in \
-  "if (mBluetoothAdapter != null)" \
   "if (mBluetoothAdapter == null || mHandler == null)" \
   "if (mLeDeviceListAdapter != null)" \
-  "if (mLeDeviceListAdapter == null || device == null)" \
+  "mScanGeneration.isCurrent(generation)" \
+  "mLeDeviceListAdapter == null || device == null" \
   "public void addDevice(BluetoothDevice device)" \
   "if (device == null) {"; do
   if ! grep -Fq "$pattern" "$SCAN_ACTIVITY"; then
@@ -756,7 +607,8 @@ SCAN_LIST_CLICK=$(sed -n \
 for scan_selection_contract in \
   "if (mLeDeviceListAdapter == null)" \
   "mLeDeviceListAdapter.getDevice(position)" \
-  "if (device == null) return;"; do
+  "if (device == null || !(v.getTag() instanceof ViewHolder)) return;" \
+  "deviceAddress.equals(viewHolder.boundDeviceAddress)"; do
   if ! printf '%s\n' "$SCAN_LIST_CLICK" | grep -Fq "$scan_selection_contract"; then
     printf '%s\n' "BLE scan list selection must keep callback guard: $scan_selection_contract" >&2
     exit 1
@@ -801,7 +653,7 @@ for pattern in \
   "byte[] descriptorValue = enabled" \
   "BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE" \
   "descriptor.setValue(descriptorValue);" \
-  "mBluetoothGatt.writeDescriptor(descriptor);"; do
+  "currentGatt.writeDescriptor(descriptor);"; do
   if ! grep -Fq "$pattern" "$BLE_SERVICE"; then
     printf '%s\n' "Missing heart-rate notification descriptor guard: $pattern" >&2
     exit 1
@@ -886,7 +738,7 @@ if [ "$workflow_paths" != "$CI_WORKFLOW" ]; then
 fi
 
 if [ "$(cat "$CI_WORKFLOW")" != "$(expected_ci_workflow)" ]; then
-  printf '%s\n' "GitHub Actions check workflow must match the approved full Android security baseline." >&2
+  printf '%s\n' "GitHub Actions check workflow must match the reviewed hosted Android verification workflow." >&2
   exit 1
 fi
 
@@ -909,46 +761,39 @@ if [ ! -f "$HOSTED_ANDROID_PLAN" ] || \
 fi
 
 if ! grep -Fq "canonical GitHub Actions workflow installs Android API 22" "$README" || \
-   ! grep -Fq "2026-06-12-hosted-android-verification.md" "$README"; then
+   ! grep -Fq "2026-06-12-hosted-android-verification.md" "$README" || \
+   ! grep -Fq "The pinned GitHub Actions \`Check\` workflow is the only supported authenticated" "$README" || \
+   ! grep -Fq "external CI trust assumptions" "$README" || \
+   ! grep -Fq "does not independently authenticate JDK bytes" "$README" || \
+   grep -Fq 'runs full `make check`' "$README"; then
   printf '%s\n' "README must document the hosted Android gate and plan." >&2
   exit 1
 fi
 
+if ! grep -Fq "The pinned GitHub Actions \`Check\` workflow is the only supported authenticated" "$SECURITY" || \
+   ! grep -Fq "external CI trust assumptions" "$SECURITY" || \
+   ! grep -Fq "does not independently authenticate JDK bytes" "$SECURITY" || \
+   grep -Fq 'runs the root `make check` baseline' "$SECURITY"; then
+  printf '%s\n' "Security guidance must bound authenticated evidence to the exact runner." >&2
+  exit 1
+fi
+
 if [ ! -f "$CODEOWNERS" ] ||
-  [ "$(wc -l < "$CODEOWNERS" | tr -d ' ')" -ne 4 ] ||
+  [ "$(wc -l < "$CODEOWNERS" | tr -d ' ')" -ne 11 ] ||
   ! grep -Fxq '/.github/CODEOWNERS @garethpaul' "$CODEOWNERS" ||
   ! grep -Fxq '/.github/workflows/ @garethpaul' "$CODEOWNERS" ||
   ! grep -Fxq '/Makefile @garethpaul' "$CODEOWNERS" ||
-  ! grep -Fxq '/scripts/check-baseline.sh @garethpaul' "$CODEOWNERS"; then
-  printf '%s\n' "CODEOWNERS must protect itself, the workflow, Makefile, and baseline checker." >&2
+  ! grep -Fxq '/build.gradle @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/settings.gradle @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/Application/build.gradle @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/Application/lint.xml @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/gradlew @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/gradlew.bat @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/gradle/wrapper/ @garethpaul' "$CODEOWNERS" ||
+  ! grep -Fxq '/scripts/ @garethpaul' "$CODEOWNERS"; then
+  printf '%s\n' "CODEOWNERS must cover every publication-gate trust root." >&2
   exit 1
 fi
-
-for make_contract in \
-  'override ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))' \
-  'ANDROID_HOME ?=' \
-  'ANDROID_SDK_ROOT ?=' \
-  'GRADLE ?= $(ROOT)gradlew' \
-  'ANDROID_SDK := $(if $(ANDROID_HOME),$(ANDROID_HOME),$(ANDROID_SDK_ROOT))'; do
-  if ! grep -Fxq "$make_contract" "$ROOT_DIR/Makefile"; then
-    printf '%s\n' "Makefile must keep contract: $make_contract" >&2
-    exit 1
-  fi
-done
-
-if [ "$(grep -Fc '$(ROOT)scripts/check-baseline.sh' "$ROOT_DIR/Makefile")" -ne 1 ]; then
-  printf '%s\n' "Makefile lint must run the baseline checker from the protected root." >&2
-  exit 1
-fi
-for gradle_contract in \
-  'cd $(ROOT) && ANDROID_HOME="$(ANDROID_SDK)" ANDROID_SDK_ROOT="$(ANDROID_SDK)" $(GRADLE) lint --no-daemon; \' \
-  'cd $(ROOT) && ANDROID_HOME="$(ANDROID_SDK)" ANDROID_SDK_ROOT="$(ANDROID_SDK)" $(GRADLE) check --no-daemon; \' \
-  'cd $(ROOT) && ANDROID_HOME="$(ANDROID_SDK)" ANDROID_SDK_ROOT="$(ANDROID_SDK)" $(GRADLE) assembleDebug --no-daemon; \' ; do
-  if [ "$(grep -Fc "$gradle_contract" "$ROOT_DIR/Makefile")" -ne 1 ]; then
-    printf '%s\n' "Makefile must keep one complete rooted Gradle contract: $gradle_contract" >&2
-    exit 1
-  fi
-done
 
 if ! grep -Fxq "Status: Completed" "$ROOT_DIR/docs/plans/2026-06-14-android-hrm-make-root-override-protection.md"; then
   printf '%s\n' "Android HRM Make root protection plan must record completed status." >&2
@@ -1298,26 +1143,15 @@ if [ ! -f "$SERVICE_AVAILABILITY_PLAN" ] || \
   exit 1
 fi
 
-if ! awk '
-  /public boolean connect\(final String address\)/ { in_connect = 1 }
-  in_connect && /BluetoothGatt previousGatt = mBluetoothGatt;/ { capture = NR }
-  in_connect && /BluetoothGatt bluetoothGatt = device\.connectGatt/ { create = NR }
-  in_connect && /if \(bluetoothGatt == null\)/ { create_guard = NR }
-  in_connect && /clearPendingDescriptorWrite\(\);/ { clear_pending = NR }
-  in_connect && /if \(previousGatt != null\)/ { previous_guard = NR }
-  in_connect && /previousGatt\.close\(\);/ { previous_close = NR }
-  in_connect && /mBluetoothGatt = bluetoothGatt;/ { publish = NR }
-  in_connect && capture && /return true;/ {
-    completed = 1
-    exit !(capture && create && create_guard && clear_pending && previous_guard && previous_close && publish &&
-      capture < create && create < create_guard && create_guard < clear_pending &&
-      clear_pending < previous_guard && previous_guard < previous_close && previous_close < publish)
-  }
-  END { if (!completed) exit 1 }
-' "$BLE_SERVICE"; then
-  printf '%s\n' "Replacement GATT creation must preserve failures and close prior ownership before publication." >&2
-  exit 1
-fi
+for replacement_contract in \
+  'previousGatt = mGattOwner.replace(bluetoothGatt);' \
+  'if (previousGatt != null)' \
+  'previousGatt.close();'; do
+  if ! grep -Fq "$replacement_contract" "$BLE_SERVICE"; then
+    printf '%s\n' "Replacement GATT ownership contract is missing: $replacement_contract" >&2
+    exit 1
+  fi
+done
 if [ "$(grep -Fc 'previousGatt.close();' "$BLE_SERVICE")" -ne 1 ]; then
   printf '%s\n' "Replacement GATT cleanup must close prior ownership exactly once." >&2
   exit 1
@@ -1391,6 +1225,76 @@ done
 if [ ! -x "$GRADLEW" ] || [ ! -f "$GRADLEW_BAT" ] || \
    [ ! -f "$WRAPPER_JAR" ] || [ ! -f "$WRAPPER_PROPERTIES" ]; then
   printf '%s\n' "Generated Gradle wrapper files must be present and gradlew must be executable." >&2
+  exit 1
+fi
+
+if [ -n "$(find "$ROOT_DIR" -maxdepth 1 \( -name GNUmakefile -o -name makefile \) -print -quit)" ]; then
+  printf '%s\n' "Alternate root makefiles must not shadow the reviewed Makefile." >&2
+  exit 1
+fi
+
+if [ ! -f "$MAKEFILE" ] || [ -L "$MAKEFILE" ] || \
+   [ "$(sha256_file "$MAKEFILE")" != "e5c1d9f6c72ea2fa6d38132c159a298173f9640b75744adc15b75a5913d2181b" ]; then
+  printf '%s\n' "Makefile must retain the reviewed non-substitutable verification entry point." >&2
+  exit 1
+fi
+
+if [ ! -f "$BUILD_FILE" ] || [ -L "$BUILD_FILE" ] || \
+   [ "$(sha256_file "$BUILD_FILE")" != "5f87bcb825b5937e291428f4816f20d0f5b7b3db66e819e03a3d3c2a6f599cd8" ]; then
+  printf '%s\n' "Application Gradle build definition must retain the reviewed Android plugin tasks." >&2
+  exit 1
+fi
+
+if [ ! -f "$ROOT_BUILD_FILE" ] || [ -L "$ROOT_BUILD_FILE" ] || \
+   [ "$(sha256_file "$ROOT_BUILD_FILE")" != "5c210454b1facc1e317a759f6059324f793841eb23d1f549179b64d1584c55f8" ]; then
+  printf '%s\n' "Root Gradle build definition must retain the reviewed project contract." >&2
+  exit 1
+fi
+
+if [ ! -f "$SETTINGS_FILE" ] || [ -L "$SETTINGS_FILE" ] || \
+   [ "$(sha256_file "$SETTINGS_FILE")" != "85fa9044216c228a55fee5e669990ec71fa2e3a7c9b3944927698037ee304688" ]; then
+  printf '%s\n' "Gradle settings must retain the reviewed Application project inclusion." >&2
+  exit 1
+fi
+
+if [ ! -f "$LINT_CONFIG" ] || [ -L "$LINT_CONFIG" ] || \
+   [ "$(sha256_file "$LINT_CONFIG")" != "5ad8971f6154196884e37ecde3183adce5c075a29f9fdfee300deefbe183661e" ]; then
+  printf '%s\n' "Android lint configuration must retain the reviewed gate contract." >&2
+  exit 1
+fi
+
+for unreviewed_gradle_entry in \
+  "$ROOT_DIR/gradle.properties" \
+  "$ROOT_DIR/local.properties" \
+  "$ROOT_DIR/init.gradle" \
+  "$ROOT_DIR/init.d" \
+  "$ROOT_DIR/buildSrc"; do
+  if [ -e "$unreviewed_gradle_entry" ]; then
+    printf '%s\n' "Unreviewed Gradle configuration entry points are not allowed." >&2
+    exit 1
+  fi
+done
+
+if [ ! -x "$ANDROID_RUNNER" ] || [ -L "$ANDROID_RUNNER" ] || \
+   [ "$(sha256_file "$ANDROID_RUNNER")" != "615d8eedd2de6aeabc852fa61d8235bb6bd09d74f7e71baa7e9025a1ebbd51fc" ]; then
+  printf '%s\n' "Android verification must retain the reviewed exact wrapper and SDK runner." >&2
+  exit 1
+fi
+
+if [ ! -x "$PUBLICATION_GATE_TESTS" ] || [ -L "$PUBLICATION_GATE_TESTS" ] || \
+   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "687e7db1434a1f1eebddbc9e068f46951a0fb3cf95623d08bd2950a73a2e1ddb" ]; then
+  printf '%s\n' "Publication-gate mutation tests must retain the reviewed contract." >&2
+  exit 1
+fi
+
+if [ ! -x "$ARCHIVE_VERIFIER" ] || [ -L "$ARCHIVE_VERIFIER" ] || \
+   [ "$(sha256_file "$ARCHIVE_VERIFIER")" != "ed6387131b2d82056f92539ed5481f177c0739f9aded434c9fa594198c739076" ]; then
+  printf '%s\n' "Archive manifest verifier must be present and executable." >&2
+  exit 1
+fi
+
+if ! grep -Fxq 'APPROVED_RUNNER_SHA256=615d8eedd2de6aeabc852fa61d8235bb6bd09d74f7e71baa7e9025a1ebbd51fc' "$PUBLICATION_GATE_TESTS"; then
+  printf '%s\n' "Publication-gate tests must independently pin the reviewed Android runner." >&2
   exit 1
 fi
 
