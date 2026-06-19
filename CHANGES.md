@@ -1,5 +1,74 @@
 # Changes
 
+## 2026-06-19
+
+- Added scan-session generations so callbacks queued by stopped or replaced
+  scans cannot populate the current device list.
+- Bound scan-row selection to the address rendered in the clicked row and
+  rejected unavailable Bluetooth permissions without crashing scan lifecycle
+  paths.
+- Added Android 6-compatible coarse-location declaration for legacy BLE scans.
+- Made GATT ownership atomic across replacement, callback failure, disconnect,
+  descriptor rollback, and repeated close paths so stale callbacks cannot
+  release or mutate a replacement connection.
+- Added focused Java state-machine tests, source contracts, and nine hostile
+  mutations without executing an unverified wrapper.
+
+## 2026-06-17
+
+- BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
+- Added ordered source contracts for adapter availability, lower and upper
+  position bounds, null-device handling, and valid selection compatibility.
+
+## 2026-06-15
+
+- BLE scanning must wait until the enable-Bluetooth system flow returns with an enabled adapter.
+- BLE scans must enter the scanning state and schedule timeout cleanup only after Android reports that scan startup succeeded.
+- Closed and released the current connection when Android rejects a GATT
+  service discovery start instead of waiting for a callback that cannot arrive.
+- Closed and released the current connection after a failed GATT service
+  discovery callback instead of leaving an unusable connected state.
+
+## 2026-06-14
+
+- Stopped failed Bluetooth initialization before attempting a GATT connection.
+- Moved GATT state and heart-rate events to an in-process local broadcast
+  channel so external applications cannot spoof or observe those updates.
+- Replacement GATT connections close the previously owned GATT exactly once
+  after atomically replacing current ownership.
+- Added an exact-commit HRM device verification matrix for scan, GATT ownership,
+  notifications, descriptor rollback, measurements, lifecycle races, and
+  privacy-safe evidence, with every runtime row explicitly unexecuted.
+
+## 2026-06-14
+
+- Tracked queued heart-rate descriptor writes and ignored stale or unrelated
+  completion callbacks.
+- Made asynchronous descriptor write failures roll back local notification
+  state after clearing the completed pending operation.
+
+## 2026-06-13
+
+- Recorded Bluetooth service binding ownership, handled rejected binds, and
+  guarded destruction against unowned unbinds.
+- Guarded service discovery and connect/disconnect menu actions while the bound
+  Bluetooth service is unavailable.
+- Gated heart-rate client configuration descriptor writes on successful local
+  notification registration.
+- Made descriptor-phase failures roll back local notification state when the
+  descriptor, value assignment, or write queue is unavailable.
+- Guarded stale GATT selection callbacks against unavailable services, missing
+  entries, and out-of-range group or child positions.
+- Added an explicit HRM component export boundary: the launcher remains
+  exported while the device-control activity and BLE service are app-internal.
+
+## 2026-06-12
+
+- Regenerated the Gradle wrapper bootstrap with official Gradle 8.14.5 tooling
+  while retaining the Gradle 2.2.1 Android runtime.
+- Pinned Gradle's official distribution checksum and added exact SDK-free
+  contracts for the generated wrapper artifacts and documentation boundary.
+
 ## 2026-06-10
 
 - Guarded GATT connection callbacks against stale instances and failed status
@@ -11,6 +80,8 @@
 - Added pinned, read-only GitHub Actions CI that runs the root `make check`
   baseline with a bounded timeout and explicit SDK-free execution.
 - Removed the maintainer-specific Android SDK path from the Makefile.
+- Disabled persisted checkout credentials, added self-protecting CODEOWNERS,
+  and replaced partial workflow checks with one canonical workflow contract.
 
 ## 2026-06-09
 

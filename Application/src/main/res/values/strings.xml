@@ -19,6 +19,7 @@
     <string name="connected">Connected</string>
     <string name="disconnected">Disconnected</string>
     <string name="error_bluetooth_not_supported">Bluetooth not supported.</string>
+    <string name="scan_start_failed">Unable to start Bluetooth scan.</string>
 
     <string name="unknown_device">Unknown device</string>
     <string name="unknown_characteristic">Unknown characteristic</string>

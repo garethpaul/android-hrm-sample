@@ -19,31 +19,56 @@ The current focus is:
 
 Priority:
 
+- Stop failed Bluetooth initialization before connection work begins
 - Keep the Bluetooth LE scan/connect/display flow intact
 - Preserve the sample's source layout and Android support dependencies
 - Make SDK and build-tool assumptions visible
 - Keep BLE startup failure paths explicit before scanning begins
+- BLE scans must enter the scanning state and schedule timeout cleanup only after Android reports that scan startup succeeded.
+- BLE scanning must wait until the enable-Bluetooth system flow returns with an enabled adapter.
 - Keep scan lifecycle callbacks safe after startup failure or pause cleanup
+- BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
 - Keep heart-rate characteristic matching tied to standard GATT UUIDs
 - Parse heart-rate format flags from measurement data and reject truncated
   packets safely
 - Keep heart-rate notification descriptor writes null-safe and reversible
+- Keep descriptor writes gated on successful local notification registration
+- Ensure descriptor-phase failures roll back local notification state
+- Ensure asynchronous descriptor write failures roll back local notification state
 - Keep heart-rate and GATT update delivery scoped to the app process boundary
 - Keep GATT characteristic operations safe when callbacks or callers omit data
+- Keep stale GATT selection callbacks from indexing replaced characteristic
+  groups or using unavailable BLE services
+- Keep Bluetooth service binding ownership explicit and guard activity actions
+  until the bound service is available
 - Keep GATT connection state scoped to the currently owned callback instance
+- Fail closed when Android rejects a GATT service discovery start
+- Terminate the current connection after a failed GATT service discovery callback
+- Keep GATT state and heart-rate events on an in-process local broadcast channel
+- Replacement GATT connections close the previously owned GATT exactly once
+  after atomically publishing new connection ownership
+- Reject callbacks from stopped scan generations and verify clicked-row device
+  identity before navigation
+- Fail closed when Bluetooth state or scan permission checks throw
 - Keep scan and control activity startup safe when legacy ActionBar presentation
   is unavailable
 - Keep GATT data-field updates safe when stale control layouts omit views
 - Keep GitHub Actions running the root `make check` baseline
+- Keep the legacy Gradle runtime behind a checksum-verified generated wrapper
 - Avoid changing BLE behavior without device or emulator verification notes
+- Keep exact-commit BLE hardware evidence separate from portable contracts,
+  with unexecuted sensor and timing scenarios recorded explicitly
 
 Next priorities:
 
 - Add explicit heart-rate-service parsing if this repo is used beyond the base
   GATT sample
-- Modernize Gradle, SDK levels, Android support libraries, and permissions
+- Evaluate Gradle runtime, SDK, support-library, and permission modernization
+  together in a dedicated compatibility pass; wrapper hardening is separate
 - Add tests around characteristic parsing and activity/service interaction
 - Document manual BLE device verification steps
+- Execute the HRM device verification matrix with an authorized sensor and
+  privacy-safe evidence
 
 Contribution rules:
 

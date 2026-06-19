@@ -14,6 +14,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import java.util.List;
@@ -29,7 +30,11 @@ public class BluetoothLeService extends Service {
     private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
-    private BluetoothGatt mBluetoothGatt;
+    private final GattConnectionOwner<BluetoothGatt> mGattOwner =
+            new GattConnectionOwner<BluetoothGatt>();
+    private BluetoothGattDescriptor mPendingDescriptorWrite;
+    private BluetoothGattCharacteristic mPendingNotificationCharacteristic;
+    private boolean mPendingNotificationEnabled;
     private int mConnectionState = STATE_DISCONNECTED;
 
     private static final int STATE_DISCONNECTED = 0;
@@ -55,49 +60,67 @@ public class BluetoothLeService extends Service {
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            if (gatt == null || gatt != mBluetoothGatt) {
-                Log.w(TAG, "Ignoring stale GATT connection callback.");
-                return;
+            BluetoothGatt gattToClose = null;
+            synchronized (mGattOwner) {
+                if (!mGattOwner.isCurrent(gatt)) {
+                    Log.w(TAG, "Ignoring stale GATT connection callback.");
+                    return;
+                }
+
+                if (status != BluetoothGatt.GATT_SUCCESS) {
+                    Log.w(TAG, "GATT connection failed with status: " + status);
+                    mConnectionState = STATE_DISCONNECTED;
+                    clearPendingDescriptorWrite();
+                    gattToClose = mGattOwner.releaseIfCurrent(gatt);
+                    broadcastUpdate(ACTION_GATT_DISCONNECTED);
+                } else if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    mConnectionState = STATE_CONNECTED;
+                    broadcastUpdate(ACTION_GATT_CONNECTED);
+                    Log.i(TAG, "Connected to GATT server.");
+                    boolean serviceDiscoveryStarted = gatt.discoverServices();
+                    Log.i(TAG, "Attempting to start service discovery:" +
+                            serviceDiscoveryStarted);
+                    if (!serviceDiscoveryStarted) {
+                        Log.w(TAG, "Unable to start GATT service discovery.");
+                        mConnectionState = STATE_DISCONNECTED;
+                        clearPendingDescriptorWrite();
+                        gattToClose = mGattOwner.releaseIfCurrent(gatt);
+                        broadcastUpdate(ACTION_GATT_DISCONNECTED);
+                    }
+                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    mConnectionState = STATE_DISCONNECTED;
+                    clearPendingDescriptorWrite();
+                    gattToClose = mGattOwner.releaseIfCurrent(gatt);
+                    Log.i(TAG, "Disconnected from GATT server.");
+                    broadcastUpdate(ACTION_GATT_DISCONNECTED);
+                }
             }
-
-            if (status != BluetoothGatt.GATT_SUCCESS) {
-                Log.w(TAG, "GATT connection failed with status: " + status);
-                mConnectionState = STATE_DISCONNECTED;
-                broadcastUpdate(ACTION_GATT_DISCONNECTED);
-                gatt.close();
-                mBluetoothGatt = null;
-                return;
-            }
-
-            String intentAction;
-            if (newState == BluetoothProfile.STATE_CONNECTED) {
-                intentAction = ACTION_GATT_CONNECTED;
-                mConnectionState = STATE_CONNECTED;
-                broadcastUpdate(intentAction);
-                Log.i(TAG, "Connected to GATT server.");
-                // Attempts to discover services after successful connection.
-                Log.i(TAG, "Attempting to start service discovery:" +
-                        gatt.discoverServices());
-
-            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                intentAction = ACTION_GATT_DISCONNECTED;
-                mConnectionState = STATE_DISCONNECTED;
-                Log.i(TAG, "Disconnected from GATT server.");
-                broadcastUpdate(intentAction);
+            if (gattToClose != null) {
+                gattToClose.close();
             }
         }
 
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-            if (gatt == null || gatt != mBluetoothGatt) {
-                Log.w(TAG, "Ignoring stale GATT services callback.");
-                return;
-            }
+            BluetoothGatt gattToClose = null;
+            synchronized (mGattOwner) {
+                if (!mGattOwner.isCurrent(gatt)) {
+                    Log.w(TAG, "Ignoring stale GATT services callback.");
+                    return;
+                }
 
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
-            } else {
-                Log.w(TAG, "onServicesDiscovered received: " + status);
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+                } else {
+                    Log.w(TAG, "onServicesDiscovered received: " + status);
+                    mConnectionState = STATE_DISCONNECTED;
+                    clearPendingDescriptorWrite();
+                    gattToClose = mGattOwner.releaseIfCurrent(gatt);
+                    broadcastUpdate(ACTION_GATT_DISCONNECTED);
+                }
+            }
+            if (gattToClose != null) {
+                gattToClose.close();
             }
         }
 
@@ -105,31 +128,60 @@ public class BluetoothLeService extends Service {
         public void onCharacteristicRead(BluetoothGatt gatt,
                                          BluetoothGattCharacteristic characteristic,
                                          int status) {
-            if (gatt == null || gatt != mBluetoothGatt) {
-                Log.w(TAG, "Ignoring stale GATT read callback.");
-                return;
-            }
+            synchronized (mGattOwner) {
+                if (!mGattOwner.isCurrent(gatt)) {
+                    Log.w(TAG, "Ignoring stale GATT read callback.");
+                    return;
+                }
 
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+                }
             }
         }
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
-            if (gatt == null || gatt != mBluetoothGatt) {
-                Log.w(TAG, "Ignoring stale GATT notification callback.");
-                return;
-            }
+            synchronized (mGattOwner) {
+                if (!mGattOwner.isCurrent(gatt)) {
+                    Log.w(TAG, "Ignoring stale GATT notification callback.");
+                    return;
+                }
 
-            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+            }
+        }
+
+        @Override
+        public void onDescriptorWrite(BluetoothGatt gatt,
+                                      BluetoothGattDescriptor descriptor,
+                                      int status) {
+            synchronized (mGattOwner) {
+                if (!mGattOwner.isCurrent(gatt)) {
+                    Log.w(TAG, "Ignoring stale GATT descriptor callback.");
+                    return;
+                }
+                if (descriptor == null || descriptor != mPendingDescriptorWrite) {
+                    Log.w(TAG, "Ignoring unrelated GATT descriptor callback.");
+                    return;
+                }
+
+                BluetoothGattCharacteristic characteristic =
+                        mPendingNotificationCharacteristic;
+                boolean enabled = mPendingNotificationEnabled;
+                clearPendingDescriptorWrite();
+                if (status != BluetoothGatt.GATT_SUCCESS && characteristic != null) {
+                    Log.w(TAG, "Heart rate notification descriptor write failed.");
+                    rollbackCharacteristicNotification(gatt, characteristic, enabled);
+                }
+            }
         }
     };
 
     private void broadcastUpdate(final String action) {
         final Intent intent = gattUpdateIntent(action);
-        sendBroadcast(intent);
+        sendGattBroadcast(intent);
     }
 
     private void broadcastUpdate(final String action,
@@ -137,7 +189,7 @@ public class BluetoothLeService extends Service {
         final Intent intent = gattUpdateIntent(action);
         if (characteristic == null) {
             Log.w(TAG, "GATT characteristic is unavailable.");
-            sendBroadcast(intent);
+            sendGattBroadcast(intent);
             return;
         }
 
@@ -150,7 +202,7 @@ public class BluetoothLeService extends Service {
                     0);
             if (flag == null) {
                 Log.w(TAG, "Heart rate measurement flags are unavailable.");
-                sendBroadcast(intent);
+                sendGattBroadcast(intent);
                 return;
             }
 
@@ -165,7 +217,7 @@ public class BluetoothLeService extends Service {
             final Integer heartRate = characteristic.getIntValue(format, 1);
             if (heartRate == null) {
                 Log.w(TAG, "Heart rate measurement value is unavailable.");
-                sendBroadcast(intent);
+                sendGattBroadcast(intent);
                 return;
             }
             Log.d(TAG, "Received heart rate measurement.");
@@ -180,7 +232,11 @@ public class BluetoothLeService extends Service {
                 intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
             }
         }
-        sendBroadcast(intent);
+        sendGattBroadcast(intent);
+    }
+
+    private void sendGattBroadcast(final Intent intent) {
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
     private Intent gattUpdateIntent(final String action) {
@@ -246,21 +302,27 @@ public class BluetoothLeService extends Service {
      *         {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
      *         callback.
      */
-    public boolean connect(final String address) {
+    public synchronized boolean connect(final String address) {
         if (mBluetoothAdapter == null || !BluetoothAdapter.checkBluetoothAddress(address)) {
             Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
             return false;
         }
 
-        // Previously connected device.  Try to reconnect.
-        if (mBluetoothDeviceAddress != null && address.equals(mBluetoothDeviceAddress)
-                && mBluetoothGatt != null) {
-            Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
-            if (mBluetoothGatt.connect()) {
-                mConnectionState = STATE_CONNECTING;
-                return true;
-            } else {
-                return false;
+        synchronized (mGattOwner) {
+            BluetoothGatt currentGatt = mGattOwner.current();
+            if (mBluetoothDeviceAddress != null && address.equals(mBluetoothDeviceAddress)
+                    && currentGatt != null) {
+                Log.d(TAG, "Trying to use an existing GATT connection.");
+                if (currentGatt.connect()) {
+                    mConnectionState = STATE_CONNECTING;
+                    return true;
+                }
+                BluetoothGatt failedGatt = mGattOwner.releaseIfCurrent(currentGatt);
+                clearPendingDescriptorWrite();
+                mConnectionState = STATE_DISCONNECTED;
+                if (failedGatt != null) {
+                    failedGatt.close();
+                }
             }
         }
 
@@ -276,10 +338,17 @@ public class BluetoothLeService extends Service {
             Log.w(TAG, "Unable to create a GATT connection.");
             return false;
         }
-        mBluetoothGatt = bluetoothGatt;
+        BluetoothGatt previousGatt;
+        synchronized (mGattOwner) {
+            previousGatt = mGattOwner.replace(bluetoothGatt);
+            clearPendingDescriptorWrite();
+            mBluetoothDeviceAddress = address;
+            mConnectionState = STATE_CONNECTING;
+        }
+        if (previousGatt != null) {
+            previousGatt.close();
+        }
         Log.d(TAG, "Trying to create a new connection.");
-        mBluetoothDeviceAddress = address;
-        mConnectionState = STATE_CONNECTING;
         return true;
     }
 
@@ -290,11 +359,14 @@ public class BluetoothLeService extends Service {
      * callback.
      */
     public void disconnect() {
-        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-            Log.w(TAG, "BluetoothAdapter not initialized");
-            return;
+        synchronized (mGattOwner) {
+            BluetoothGatt currentGatt = mGattOwner.current();
+            if (mBluetoothAdapter == null || currentGatt == null) {
+                Log.w(TAG, "BluetoothAdapter not initialized");
+                return;
+            }
+            currentGatt.disconnect();
         }
-        mBluetoothGatt.disconnect();
     }
 
     /**
@@ -302,11 +374,15 @@ public class BluetoothLeService extends Service {
      * released properly.
      */
     public void close() {
-        if (mBluetoothGatt == null) {
-            return;
+        BluetoothGatt releasedGatt;
+        synchronized (mGattOwner) {
+            clearPendingDescriptorWrite();
+            mConnectionState = STATE_DISCONNECTED;
+            releasedGatt = mGattOwner.releaseCurrent();
         }
-        mBluetoothGatt.close();
-        mBluetoothGatt = null;
+        if (releasedGatt != null) {
+            releasedGatt.close();
+        }
     }
 
     /**
@@ -317,11 +393,14 @@ public class BluetoothLeService extends Service {
      * @param characteristic The characteristic to read from.
      */
     public void readCharacteristic(BluetoothGattCharacteristic characteristic) {
-        if (mBluetoothAdapter == null || mBluetoothGatt == null || characteristic == null) {
-            Log.w(TAG, "BluetoothAdapter not initialized or characteristic unavailable.");
-            return;
+        synchronized (mGattOwner) {
+            BluetoothGatt currentGatt = mGattOwner.current();
+            if (mBluetoothAdapter == null || currentGatt == null || characteristic == null) {
+                Log.w(TAG, "BluetoothAdapter not initialized or characteristic unavailable.");
+                return;
+            }
+            currentGatt.readCharacteristic(characteristic);
         }
-        mBluetoothGatt.readCharacteristic(characteristic);
     }
 
     /**
@@ -332,26 +411,73 @@ public class BluetoothLeService extends Service {
      */
     public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic,
                                               boolean enabled) {
-        if (mBluetoothAdapter == null || mBluetoothGatt == null || characteristic == null) {
-            Log.w(TAG, "BluetoothAdapter not initialized or characteristic unavailable.");
-            return;
-        }
-        mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
-
-        // This is specific to Heart Rate Measurement.
-        if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
-            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
-                    UUID.fromString(SampleGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
-            if (descriptor == null) {
-                Log.w(TAG, "Heart rate notification descriptor is missing.");
+        synchronized (mGattOwner) {
+            BluetoothGatt currentGatt = mGattOwner.current();
+            if (mBluetoothAdapter == null || currentGatt == null || characteristic == null) {
+                Log.w(TAG, "BluetoothAdapter not initialized or characteristic unavailable.");
+                return;
+            }
+            boolean heartRateMeasurement =
+                    UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid());
+            if (heartRateMeasurement && mPendingDescriptorWrite != null) {
+                Log.w(TAG, "Heart rate notification descriptor write is already pending.");
+                return;
+            }
+            boolean notificationSet = currentGatt.setCharacteristicNotification(
+                    characteristic,
+                    enabled);
+            if (!notificationSet) {
+                Log.w(TAG, "Unable to set local GATT notification state.");
                 return;
             }
 
-            byte[] descriptorValue = enabled
-                    ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                    : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE;
-            descriptor.setValue(descriptorValue);
-            mBluetoothGatt.writeDescriptor(descriptor);
+            if (heartRateMeasurement) {
+                BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
+                        UUID.fromString(SampleGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
+                if (descriptor == null) {
+                    Log.w(TAG, "Heart rate notification descriptor is missing.");
+                    rollbackCharacteristicNotification(currentGatt, characteristic, enabled);
+                    return;
+                }
+
+                byte[] descriptorValue = enabled
+                        ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                        : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE;
+                boolean descriptorValueSet = descriptor.setValue(descriptorValue);
+                if (!descriptorValueSet) {
+                    Log.w(TAG, "Unable to set heart rate notification descriptor value.");
+                    rollbackCharacteristicNotification(currentGatt, characteristic, enabled);
+                    return;
+                }
+
+                mPendingDescriptorWrite = descriptor;
+                mPendingNotificationCharacteristic = characteristic;
+                mPendingNotificationEnabled = enabled;
+                boolean descriptorWriteQueued = currentGatt.writeDescriptor(descriptor);
+                if (!descriptorWriteQueued) {
+                    Log.w(TAG, "Unable to queue heart rate notification descriptor write.");
+                    clearPendingDescriptorWrite();
+                    rollbackCharacteristicNotification(currentGatt, characteristic, enabled);
+                }
+            }
+        }
+    }
+
+    private void clearPendingDescriptorWrite() {
+        mPendingDescriptorWrite = null;
+        mPendingNotificationCharacteristic = null;
+        mPendingNotificationEnabled = false;
+    }
+
+    private void rollbackCharacteristicNotification(
+            BluetoothGatt gatt,
+            BluetoothGattCharacteristic characteristic,
+            boolean enabled) {
+        boolean rollbackSet = gatt.setCharacteristicNotification(
+                characteristic,
+                !enabled);
+        if (!rollbackSet) {
+            Log.w(TAG, "Unable to roll back local GATT notification state.");
         }
     }
 
@@ -362,8 +488,11 @@ public class BluetoothLeService extends Service {
      * @return A {@code List} of supported services.
      */
     public List<BluetoothGattService> getSupportedGattServices() {
-        if (mBluetoothGatt == null) return null;
+        synchronized (mGattOwner) {
+            BluetoothGatt currentGatt = mGattOwner.current();
+            if (currentGatt == null) return null;
 
-        return mBluetoothGatt.getServices();
+            return currentGatt.getServices();
+        }
     }
 }

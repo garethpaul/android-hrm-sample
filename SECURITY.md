@@ -16,6 +16,16 @@ Do not open a public issue that includes exploit code, secrets, personal data, o
 
 Helpful reports include:
 
+- BLE scans must enter the scanning state and schedule timeout cleanup only after Android reports that scan startup succeeded.
+- BLE scanning must wait until the enable-Bluetooth system flow returns with an enabled adapter.
+- Rejected GATT service discovery startup fails closed by publishing
+  disconnection, closing the owned connection, and releasing its reference.
+- A failed GATT service discovery callback clears pending descriptor state,
+  publishes disconnection, and releases the current connection.
+- Replacement GATT connections close the previously owned GATT exactly once
+  after atomic ownership replacement, while failed creation preserves current
+  ownership.
+
 - the affected file, endpoint, permission, dependency, or workflow
 - a concise impact statement explaining what an attacker could do
 - reproduction steps using test data and accounts you control
@@ -32,14 +42,59 @@ Helpful reports include:
 - Dependency manifests detected: build.gradle. Dependency updates should preserve lockfiles when present and avoid introducing packages without a clear maintenance reason.
 - Stale BLE control layouts should not crash local GATT display paths when
   optional data views are unavailable.
-- Pinned, read-only GitHub Actions runs the root `make check` baseline without
-  inheriting hosted Android SDK state.
+- Stale GATT selection callbacks fail closed before indexing mutable
+  characteristic groups or using an unavailable BLE service.
+- BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
+- Scan callbacks carry session generations, and recycled list rows must retain
+  the selected device address before navigation.
+- Missing Bluetooth state or scan permissions fail closed; legacy Android 6
+  scanning declares coarse-location access.
+- Bluetooth service binding ownership is explicit so failed binding and
+  service-dependent activity actions do not trigger unowned unbinds or null
+  service dereferences.
+- Failed local GATT notification registration returns before heart-rate
+  descriptor mutation or write initiation.
+- Heart-rate descriptor-phase failures roll back local notification state with
+  generic diagnostics and without exposing BLE identifiers or values.
+- Asynchronous descriptor write failures roll back local notification state
+  only after the active GATT and pending descriptor identities match.
+- GATT terminal callbacks release only their exact owned connection, and close
+  remains idempotent across callback, activity teardown, and replacement races.
+- GATT connection, discovery, and heart-rate events use an in-process local
+  broadcast channel instead of accepting or publishing framework broadcasts.
+- Pinned, read-only GitHub Actions checks out the reviewed head and invokes the
+  exact Android runner with the hosted API 22 SDK and Java 8 toolchain.
+- The pinned GitHub Actions `Check` workflow is the only supported authenticated
+  publication gate. It runs the exact runner before repository-controlled tests,
+  binds the clean Git tree, and builds a fresh commit archive. The GitHub-hosted
+  runner and pinned `actions/setup-java` step are external CI trust assumptions.
+  Repository code does not independently authenticate JDK bytes.
+- Make is unsupported because flags can suppress recipes or failures before
+  repository code executes.
+- The baseline pins and verifies the wrapper JAR and Gradle distribution checksums.
+  An uncached bootstrap still depends on Gradle's HTTPS service, so these
+  integrity controls do not provide offline reproducibility.
+- Hosted checkout credentials are not persisted. Self-protecting CODEOWNERS
+  assigns every publication-gate trust root to the repository owner; repository
+  rules should require that approval.
+- `check.yml` remains the only approved workflow until another workflow
+  receives an explicit least-privilege security contract.
+- The explicit HRM component export boundary keeps the launcher activity
+  public while the device-control activity and BLE service are non-exported.
 
 ## Mobile Privacy Notes
+
+- A failed Bluetooth initialization terminates the activity callback before a
+  GATT connection can be attempted.
 
 If this project requests device permissions such as location, camera, microphone, contacts, Bluetooth, health data, or local storage access, reports should describe the permission involved and whether sensitive data can be accessed, persisted, or transmitted unexpectedly. Please avoid testing against real third-party user data or accounts you do not control.
 
 ## Dependency and Supply Chain Security
+
+The generated Gradle 8.14.5 bootstrap retains the legacy Gradle 2.2.1 runtime
+required by Android Gradle Plugin 1.0.0. Review all four wrapper files together;
+the SDK-free baseline rejects drift from Gradle's published wrapper JAR and
+distribution SHA-256 values.
 
 Dependency updates should come from trusted package managers and should keep lockfiles in sync when lockfiles exist. Do not commit credentials, private keys, tokens, generated secrets, or machine-local configuration. If a vulnerability depends on a compromised package, typosquatting risk, insecure transitive dependency, or unsafe build step, include the package name, affected version, and the path through which it is used.
 
