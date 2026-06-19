@@ -664,7 +664,7 @@ if [ ! -x "$ANDROID_RUNNER" ] || [ -L "$ANDROID_RUNNER" ] || \
 fi
 
 if [ ! -x "$PUBLICATION_GATE_TESTS" ] || [ -L "$PUBLICATION_GATE_TESTS" ] || \
-   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "a21ada42cb61fa4eb8728a3320f495cd605ffad8dd058e5d8bbe20d2b266363c" ]; then
+   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "687e7db1434a1f1eebddbc9e068f46951a0fb3cf95623d08bd2950a73a2e1ddb" ]; then
   printf '%s\n' "Publication-gate mutation tests must retain the reviewed contract." >&2
   exit 1
 fi

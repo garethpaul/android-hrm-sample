@@ -88,8 +88,9 @@ EOF
   ImageOS=ubuntu24
   JAVA_HOME="$fake_root/arbitrary-java-layout"
   ANDROID_HOME="$fake_root/android-sdk"
+  ANDROID_SDK_ROOT="$fake_root/android-sdk"
   FAKE_GRADLE_SCENARIO=$scenario
-  export GITHUB_ACTIONS RUNNER_OS ImageOS JAVA_HOME ANDROID_HOME FAKE_GRADLE_SCENARIO
+  export GITHUB_ACTIONS RUNNER_OS ImageOS JAVA_HOME ANDROID_HOME ANDROID_SDK_ROOT FAKE_GRADLE_SCENARIO
 }
 
 expect_runner_accepted() {
@@ -351,19 +352,19 @@ expect_rejected added-buildsrc \
   'mkdir -p buildSrc/src/main/groovy; printf "class Fake {}\n" > buildSrc/src/main/groovy/Fake.groovy'
 
 expect_runner_accepted setup-java-arbitrary-layout-with-legacy-note \
-  'configure_fake_hosted_inputs success'
+  'mkdir -p "$TEST_ROOT/inherited-android-sdk-root"; ANDROID_SDK_ROOT="$TEST_ROOT/inherited-android-sdk-root"; export ANDROID_SDK_ROOT; configure_fake_hosted_inputs success'
 expect_runner_rejected propagated-gradle-failure \
   'simulated Gradle failure' \
-  'configure_fake_hosted_inputs failure'
+  'mkdir -p "$TEST_ROOT/inherited-android-sdk-root"; ANDROID_SDK_ROOT="$TEST_ROOT/inherited-android-sdk-root"; export ANDROID_SDK_ROOT; configure_fake_hosted_inputs failure'
 expect_runner_rejected missing-real-gradle-task \
   'Gradle did not execute :Application:check from a clean build.' \
-  'configure_fake_hosted_inputs missing-task'
+  'mkdir -p "$TEST_ROOT/inherited-android-sdk-root"; ANDROID_SDK_ROOT="$TEST_ROOT/inherited-android-sdk-root"; export ANDROID_SDK_ROOT; configure_fake_hosted_inputs missing-task'
 expect_runner_rejected missing-lint-and-apk-artifacts \
   'Expected lint and debug APK artifacts were not produced.' \
-  'configure_fake_hosted_inputs missing-lint-apk'
+  'mkdir -p "$TEST_ROOT/inherited-android-sdk-root"; ANDROID_SDK_ROOT="$TEST_ROOT/inherited-android-sdk-root"; export ANDROID_SDK_ROOT; configure_fake_hosted_inputs missing-lint-apk'
 expect_runner_rejected missing-release-class-artifact \
   'Expected debug and release Java class artifacts were not produced.' \
-  'configure_fake_hosted_inputs missing-release-class'
+  'mkdir -p "$TEST_ROOT/inherited-android-sdk-root"; ANDROID_SDK_ROOT="$TEST_ROOT/inherited-android-sdk-root"; export ANDROID_SDK_ROOT; configure_fake_hosted_inputs missing-release-class'
 
 expect_runner_rejected dirty-tracked-worktree \
   'Authenticated verification requires a clean tracked tree and index.' \
