@@ -55,9 +55,7 @@ Gradle's HTTPS distribution service.
 git clone https://github.com/garethpaul/android-hrm-sample.git
 cd android-hrm-sample
 scripts/check-baseline.sh
-./gradlew lint --no-daemon
-./gradlew check --no-daemon
-./gradlew assembleDebug --no-daemon
+./scripts/run-android-verification.sh
 ```
 
 The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
@@ -68,8 +66,12 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 ## Testing and Verification
 
-- `make check` - runs the source baseline and Android SDK-backed Gradle checks
-  when `ANDROID_HOME` or `ANDROID_SDK_ROOT` is configured
+- `./scripts/run-android-verification.sh` is the canonical Android verification
+  command when `ANDROID_HOME` and a Java 8 `JAVA_HOME` are configured.
+- The exact runner is the only authenticated publication-gate entry point.
+  Make targets deliberately refuse verification because caller-controlled Make
+  flags can skip recipes, ignore failures, replace the shell, or select another
+  makefile.
 - `scripts/check-baseline.sh` - runs SDK-free HRM sample baseline checks.
 - The SDK-free baseline protects GATT property checks, BLE address validation,
   scan timeout cleanup, heart-rate characteristic matching, and resource lint
@@ -78,10 +80,10 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   or the Bluetooth manager service is unavailable.
 - `./gradlew lint --no-daemon`, `./gradlew check --no-daemon`, and `./gradlew assembleDebug --no-daemon` when the Android SDK is configured.
 - The canonical GitHub Actions workflow installs Android API 22 and build-tools
-  24.0.3, selects Java 8, and runs full `make check` on pushes and pull
-  requests using Ubuntu 24.04 with superseded-run cancellation.
-- Local Gradle checks accept `ANDROID_HOME` or `ANDROID_SDK_ROOT` and match the
-  hosted toolchain contract.
+  24.0.3, selects Java 8, checks out the reviewed pull-request head, and invokes
+  the exact runner on Ubuntu 24.04 with superseded-run cancellation.
+- Local authenticated verification requires `ANDROID_HOME`; the runner binds
+  `ANDROID_SDK_ROOT` to that same SDK and matches the hosted toolchain contract.
 
 The legacy plugin uses its non-queued PNG cruncher because the concurrent
 cruncher can fail nondeterministically on clean hosted builds. BLE behavior

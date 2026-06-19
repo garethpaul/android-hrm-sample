@@ -164,6 +164,39 @@ else
   printf '%s\n' "PASS: command-line ROOT cannot redirect the reviewed Make entry point"
 fi
 
+if grep -F 'scripts/run-android-verification.sh' "$ROOT_DIR/Makefile" | grep -Fvq 'printf'; then
+  printf '%s\n' "FAIL: Make remains represented as an authenticated verification entry point" >&2
+  FAILURES=$((FAILURES + 1))
+else
+  printf '%s\n' "PASS: Make is outside the authenticated verification boundary"
+fi
+
+make_log="$TEST_ROOT/make-boundary.log"
+if make -s -f "$ROOT_DIR/Makefile" check >"$make_log" 2>&1 || \
+   ! grep -Fq 'Run ./scripts/run-android-verification.sh directly.' "$make_log"; then
+  printf '%s\n' "FAIL: Make does not explicitly refuse authenticated verification" >&2
+  cat "$make_log" >&2
+  FAILURES=$((FAILURES + 1))
+else
+  printf '%s\n' "PASS: Make explicitly refuses authenticated verification"
+fi
+
+if ! grep -Fq 'The exact runner is the only authenticated publication-gate entry point.' "$ROOT_DIR/README.md" || \
+   grep -Fq 'runs full `make check`' "$ROOT_DIR/README.md"; then
+  printf '%s\n' "FAIL: README does not bound publication evidence to the exact runner" >&2
+  FAILURES=$((FAILURES + 1))
+else
+  printf '%s\n' "PASS: README bounds publication evidence to the exact runner"
+fi
+
+if ! grep -Fq 'The exact runner, not Make, is the authenticated hosted publication gate.' "$ROOT_DIR/SECURITY.md" || \
+   grep -Fq 'runs the root `make check` baseline' "$ROOT_DIR/SECURITY.md"; then
+  printf '%s\n' "FAIL: security guidance still treats Make as authenticated evidence" >&2
+  FAILURES=$((FAILURES + 1))
+else
+  printf '%s\n' "PASS: security guidance excludes Make from authenticated evidence"
+fi
+
 if ! grep -Fq 'unset ANDROID_SDK GRADLE GRADLE_OPTS GNUMAKEFLAGS JAVA_OPTS JAVA_TOOL_OPTIONS MAKEFLAGS MAKEFILES MFLAGS _JAVA_OPTIONS' \
   "$ROOT_DIR/scripts/run-android-verification.sh"; then
   printf '%s\n' "FAIL: Android runner does not clear inherited JVM and Gradle injection options" >&2

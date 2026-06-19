@@ -32,14 +32,16 @@ Helpful reports include:
 - Dependency manifests detected: build.gradle. Dependency updates should preserve lockfiles when present and avoid introducing packages without a clear maintenance reason.
 - Stale BLE control layouts should not crash local GATT display paths when
   optional data views are unavailable.
-- Pinned, read-only GitHub Actions runs the root `make check` baseline without
-  inheriting hosted Android SDK state.
+- Pinned, read-only GitHub Actions checks out the reviewed head and invokes the
+  exact Android runner with the hosted API 22 SDK and Java 8 toolchain.
+- The exact runner, not Make, is the authenticated hosted publication gate.
+  Make flags can suppress recipes or failures before repository code executes.
 - The baseline pins and verifies the wrapper JAR and Gradle distribution checksums.
   An uncached bootstrap still depends on Gradle's HTTPS service, so these
   integrity controls do not provide offline reproducibility.
 - Hosted checkout credentials are not persisted. Self-protecting CODEOWNERS
-  assigns the workflow, Makefile, and baseline checker to the repository owner;
-  repository rules should require that approval.
+  assigns every publication-gate trust root to the repository owner; repository
+  rules should require that approval.
 - `check.yml` remains the only approved workflow until another workflow
   receives an explicit least-privilege security contract.
 

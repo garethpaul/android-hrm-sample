@@ -418,8 +418,16 @@ if [ ! -f "$HOSTED_ANDROID_PLAN" ] || \
 fi
 
 if ! grep -Fq "canonical GitHub Actions workflow installs Android API 22" "$README" || \
-   ! grep -Fq "2026-06-12-hosted-android-verification.md" "$README"; then
+   ! grep -Fq "2026-06-12-hosted-android-verification.md" "$README" || \
+   ! grep -Fq "The exact runner is the only authenticated publication-gate entry point." "$README" || \
+   grep -Fq 'runs full `make check`' "$README"; then
   printf '%s\n' "README must document the hosted Android gate and plan." >&2
+  exit 1
+fi
+
+if ! grep -Fq "The exact runner, not Make, is the authenticated hosted publication gate." "$SECURITY" || \
+   grep -Fq 'runs the root `make check` baseline' "$SECURITY"; then
+  printf '%s\n' "Security guidance must bound authenticated evidence to the exact runner." >&2
   exit 1
 fi
 
@@ -603,7 +611,7 @@ if [ -n "$(find "$ROOT_DIR" -maxdepth 1 \( -name GNUmakefile -o -name makefile \
 fi
 
 if [ ! -f "$MAKEFILE" ] || [ -L "$MAKEFILE" ] || \
-   [ "$(sha256_file "$MAKEFILE")" != "11917fe963da5c3b8b087e5ed40119de1e072e60a74fbf070fbf444392389ab8" ]; then
+   [ "$(sha256_file "$MAKEFILE")" != "d38a9521f170b31a7ced2b985e6fb107af3328c927addd2ed8f90b29f4f8cd60" ]; then
   printf '%s\n' "Makefile must retain the reviewed non-substitutable verification entry point." >&2
   exit 1
 fi
@@ -651,7 +659,7 @@ if [ ! -x "$ANDROID_RUNNER" ] || [ -L "$ANDROID_RUNNER" ] || \
 fi
 
 if [ ! -x "$PUBLICATION_GATE_TESTS" ] || [ -L "$PUBLICATION_GATE_TESTS" ] || \
-   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "d63797748ea2e218eed7c71d2eddf645ca1ccb9ab7c2bffd1578911c2d3ff007" ]; then
+   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "dca3f2771df3bfd75d43a5fcfe6906c0cd0cb0a52b9629e99917747418bb3815" ]; then
   printf '%s\n' "Publication-gate mutation tests must retain the reviewed contract." >&2
   exit 1
 fi

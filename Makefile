@@ -1,6 +1,6 @@
 .PHONY: build check lint test verify
 
-override ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-
 build check lint test verify:
-	@$(ROOT)scripts/run-android-verification.sh
+	@printf '%s\n' 'Make is not an authenticated verification boundary.' >&2
+	@printf '%s\n' 'Run ./scripts/run-android-verification.sh directly.' >&2
+	@exit 2
