@@ -1288,7 +1288,7 @@ if [ ! -x "$PUBLICATION_GATE_TESTS" ] || [ -L "$PUBLICATION_GATE_TESTS" ] || \
 fi
 
 if [ ! -x "$ARCHIVE_VERIFIER" ] || [ -L "$ARCHIVE_VERIFIER" ] || \
-   [ "$(sha256_file "$ARCHIVE_VERIFIER")" != "ed6387131b2d82056f92539ed5481f177c0739f9aded434c9fa594198c739076" ]; then
+   [ "$(sha256_file "$ARCHIVE_VERIFIER")" != "3c41d3863eb2100dd9ac6c0420c2c952a5fa3a845e94de631aaeb6e53d59ecd6" ]; then
   printf '%s\n' "Archive manifest verifier must be present and executable." >&2
   exit 1
 fi

@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-21
+
+- Made the authenticated archive verifier compatible with the runner's
+  `/usr/bin/python3` 3.8 boundary and removed generated Python bytecode from
+  the reviewed source tree.
+
 ## 2026-06-19
 
 - Added scan-session generations so callbacks queued by stopped or replaced
