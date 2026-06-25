@@ -1,5 +1,22 @@
 # Changes
 
+## 2026-06-25T20:50:56Z — P1 privacy — cycle: GATT UUID logging
+
+- Threads: inspected BLE scan, service, callback, characteristic discovery,
+  logging, portable contracts, hostile mutations, and authenticated Android
+  verification boundaries; no open pull requests or issues were present.
+- Bug fixed: removed routine verbose logging of the discovered heart-rate GATT
+  UUID while preserving standard-UUID matching and notification registration.
+- Files: `DeviceControlActivity.java`, `scripts/test-ble-source-contracts.py`,
+  `scripts/test-ble-mutations.sh`, and
+  `docs/plans/2026-06-25-hrm-gatt-uuid-log-removal.md`.
+- Validation: passed source contracts, Java session guards, hostile mutations,
+  the portable baseline, and publication-gate integrity tests.
+- Blockers: no Android SDK build, emulator, device, BLE sensor, or live GATT
+  flow ran locally; authenticated hosted Android verification is required.
+- Next: keep BLE names, addresses, UUIDs, advertising data, and measurements
+  out of routine logs and committed evidence.
+
 ## 2026-06-21
 
 - Made the authenticated archive verifier compatible with the runner's

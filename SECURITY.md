@@ -56,6 +56,7 @@ Helpful reports include:
   descriptor mutation or write initiation.
 - Heart-rate descriptor-phase failures roll back local notification state with
   generic diagnostics and without exposing BLE identifiers or values.
+- Discovered GATT UUIDs remain out of routine characteristic-discovery logs.
 - Asynchronous descriptor write failures roll back local notification state
   only after the active GATT and pending descriptor identities match.
 - GATT terminal callbacks release only their exact owned connection, and close
