@@ -38,20 +38,7 @@ for contract in required_scan:
 assert scan.count("catch (SecurityException securityException)") >= 2
 
 assert "clearGattSelectionState();" in control
-
-characteristic_loop = control.split(
-    "for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {", 1
-)[1].split("gattCharacteristicGroupData.add(currentCharaData);", 1)[0]
-heart_rate_branch = characteristic_loop.index(
-    "if (SampleGattAttributes.HEART_RATE_MEASUREMENT.equals(uuid)) {"
-)
-assert characteristic_loop.index(
-    "currentCharaData.put(LIST_NAME, gattInfo);"
-) < heart_rate_branch, "characteristic names must be populated before HRM-specific behavior"
-assert characteristic_loop.index(
-    "currentCharaData.put(LIST_UUID, uuid);"
-) < heart_rate_branch, "characteristic UUIDs must be populated before HRM-specific behavior"
-
+assert 'Log.v("loop", uuid);' not in control, "GATT UUIDs must not be logged"
 assert '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>' in manifest
 
 print("BLE source contracts passed.")

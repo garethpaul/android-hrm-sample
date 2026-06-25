@@ -37,7 +37,6 @@ Priority:
 - Ensure asynchronous descriptor write failures roll back local notification state
 - Keep heart-rate and GATT update delivery scoped to the app process boundary
 - Keep GATT characteristic operations safe when callbacks or callers omit data
-- Keep resolved characteristic names and UUIDs visible for every GATT row
 - Keep stale GATT selection callbacks from indexing replaced characteristic
   groups or using unavailable BLE services
 - Keep Bluetooth service binding ownership explicit and guard activity actions

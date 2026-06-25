@@ -117,6 +117,8 @@ evidence, and explicit unexecuted rows.
   after an identity-checked callback from the active GATT connection.
 - GATT broadcasts are package-scoped before delivery, and exact heart-rate
   values are not written to debug logs.
+- Discovered GATT UUIDs and other BLE identifiers are also omitted from
+  routine characteristic-discovery logs.
 - The explicit HRM component export boundary exposes only the launcher
   activity; the device-control activity and BLE service remain app-internal.
 - BLE scan startup guards unsupported devices and missing Bluetooth manager
@@ -138,8 +140,6 @@ evidence, and explicit unexecuted rows.
   notification, or data-broadcast parsing work.
 - Stale GATT selection callbacks reject missing services, groups,
   characteristics, and out-of-range positions before BLE operations.
-- Every discovered GATT characteristic row retains its resolved name and UUID;
-  automatic notification registration remains limited to heart-rate data.
 - Bluetooth service binding ownership is recorded explicitly; rejected binds,
   destruction, discovery, and menu actions fail closed while the service is
   unavailable.

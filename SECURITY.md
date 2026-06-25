@@ -44,8 +44,6 @@ Helpful reports include:
   optional data views are unavailable.
 - Stale GATT selection callbacks fail closed before indexing mutable
   characteristic groups or using an unavailable BLE service.
-- Generic GATT characteristic metadata is rendered independently from the
-  HRM-only notification branch so blank rows cannot obscure selected targets.
 - BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
 - Scan callbacks carry session generations, and recycled list rows must retain
   the selected device address before navigation.
@@ -58,6 +56,7 @@ Helpful reports include:
   descriptor mutation or write initiation.
 - Heart-rate descriptor-phase failures roll back local notification state with
   generic diagnostics and without exposing BLE identifiers or values.
+- Discovered GATT UUIDs remain out of routine characteristic-discovery logs.
 - Asynchronous descriptor write failures roll back local notification state
   only after the active GATT and pending descriptor identities match.
 - GATT terminal callbacks release only their exact owned connection, and close

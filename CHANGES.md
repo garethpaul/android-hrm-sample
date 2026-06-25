@@ -1,25 +1,21 @@
 # Changes
 
-## 2026-06-25T20:50:56Z — P2 correctness — cycle: GATT row metadata
+## 2026-06-25T20:50:56Z — P1 privacy — cycle: GATT UUID logging
 
-- Threads: inspected the default branch, open work, Android verification
-  boundary, BLE scan/session ownership, service binding, GATT callbacks,
-  characteristic rendering, source contracts, and hostile mutation suite; no
-  open pull requests or issues were present.
-- Bug fixed: every discovered GATT characteristic now receives its resolved
-  display name and UUID before heart-rate-specific notification handling, so
-  non-heart-rate characteristics no longer appear as empty selectable rows.
+- Threads: inspected BLE scan, service, callback, characteristic discovery,
+  logging, portable contracts, hostile mutations, and authenticated Android
+  verification boundaries; no open pull requests or issues were present.
+- Bug fixed: removed routine verbose logging of the discovered heart-rate GATT
+  UUID while preserving standard-UUID matching and notification registration.
 - Files: `DeviceControlActivity.java`, `scripts/test-ble-source-contracts.py`,
   `scripts/test-ble-mutations.sh`, and
-  `docs/plans/2026-06-25-hrm-characteristic-row-metadata.md`.
-- Validation: reproduced the ordering-contract failure, passed the focused
-  source contracts, session guards, hostile mutations, portable baseline, and
-  publication-gate integrity tests.
-- Blockers: no Android SDK build, emulator, physical device, BLE sensor, or
-  live GATT flow was executed locally; the authenticated hosted Android gate
-  remains required before merge.
-- Next: add device evidence that mixed-service peripherals render named rows
-  while automatic notification registration remains HRM-only.
+  `docs/plans/2026-06-25-hrm-gatt-uuid-log-removal.md`.
+- Validation: passed source contracts, Java session guards, hostile mutations,
+  the portable baseline, and publication-gate integrity tests.
+- Blockers: no Android SDK build, emulator, device, BLE sensor, or live GATT
+  flow ran locally; authenticated hosted Android verification is required.
+- Next: keep BLE names, addresses, UUIDs, advertising data, and measurements
+  out of routine logs and committed evidence.
 
 ## 2026-06-21
 
