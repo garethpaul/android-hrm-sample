@@ -138,6 +138,8 @@ evidence, and explicit unexecuted rows.
   notification, or data-broadcast parsing work.
 - Stale GATT selection callbacks reject missing services, groups,
   characteristics, and out-of-range positions before BLE operations.
+- Every discovered GATT characteristic row retains its resolved name and UUID;
+  automatic notification registration remains limited to heart-rate data.
 - Bluetooth service binding ownership is recorded explicitly; rejected binds,
   destruction, discovery, and menu actions fail closed while the service is
   unavailable.

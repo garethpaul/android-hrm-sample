@@ -1,5 +1,26 @@
 # Changes
 
+## 2026-06-25T20:50:56Z — P2 correctness — cycle: GATT row metadata
+
+- Threads: inspected the default branch, open work, Android verification
+  boundary, BLE scan/session ownership, service binding, GATT callbacks,
+  characteristic rendering, source contracts, and hostile mutation suite; no
+  open pull requests or issues were present.
+- Bug fixed: every discovered GATT characteristic now receives its resolved
+  display name and UUID before heart-rate-specific notification handling, so
+  non-heart-rate characteristics no longer appear as empty selectable rows.
+- Files: `DeviceControlActivity.java`, `scripts/test-ble-source-contracts.py`,
+  `scripts/test-ble-mutations.sh`, and
+  `docs/plans/2026-06-25-hrm-characteristic-row-metadata.md`.
+- Validation: reproduced the ordering-contract failure, passed the focused
+  source contracts, session guards, hostile mutations, portable baseline, and
+  publication-gate integrity tests.
+- Blockers: no Android SDK build, emulator, physical device, BLE sensor, or
+  live GATT flow was executed locally; the authenticated hosted Android gate
+  remains required before merge.
+- Next: add device evidence that mixed-service peripherals render named rows
+  while automatic notification registration remains HRM-only.
+
 ## 2026-06-21
 
 - Made the authenticated archive verifier compatible with the runner's

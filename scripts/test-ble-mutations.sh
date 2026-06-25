@@ -44,6 +44,9 @@ expect_rejected descriptor-rollback-owner \
 expect_rejected location-permission-removal \
   "python3 -c \"p='Application/src/main/AndroidManifest.xml'; s=open(p).read().replace('    <uses-permission android:name=\\\"android.permission.ACCESS_COARSE_LOCATION\\\"/>\\n', ''); open(p,'w').write(s)\"" \
   "./scripts/test-ble-source-contracts.py"
+expect_rejected characteristic-row-metadata-removal \
+  "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java'; s=open(p).read().replace('                currentCharaData.put(LIST_NAME, gattInfo);\\n', '', 1); open(p,'w').write(s)\"" \
+  "./scripts/test-ble-source-contracts.py"
 expect_rejected permission-exception-guard-removal \
   "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/DeviceScanActivity.java'; s=open(p).read().replace('catch (SecurityException securityException)', 'catch (RuntimeException runtimeException)'); open(p,'w').write(s)\"" \
   "./scripts/test-ble-source-contracts.py"

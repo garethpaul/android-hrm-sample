@@ -44,6 +44,8 @@ Helpful reports include:
   optional data views are unavailable.
 - Stale GATT selection callbacks fail closed before indexing mutable
   characteristic groups or using an unavailable BLE service.
+- Generic GATT characteristic metadata is rendered independently from the
+  HRM-only notification branch so blank rows cannot obscure selected targets.
 - BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
 - Scan callbacks carry session generations, and recycled list rows must retain
   the selected device address before navigation.
