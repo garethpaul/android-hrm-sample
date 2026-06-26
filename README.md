@@ -79,9 +79,11 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   otherwise skip recipes, ignore failures, replace the shell, or select another
   makefile.
 - `scripts/check-baseline.sh` - runs SDK-free HRM sample baseline checks.
+- `scripts/test-heart-rate-parser.sh` - executes the production Heart Rate
+  Service packet parser with Java 7 source compatibility and no Android SDK.
 - The SDK-free baseline protects GATT property checks, BLE address validation,
-  scan timeout cleanup, heart-rate characteristic matching, and resource lint
-  contracts.
+  scan timeout cleanup, heart-rate characteristic matching, complete
+  measurement parsing, and resource lint contracts.
 - BLE scan startup exits before adapter use when the device lacks BLE support
   or the Bluetooth manager service is unavailable.
 - `./gradlew lint --no-daemon`, `./gradlew check --no-daemon`, and `./gradlew assembleDebug --no-daemon` when the Android SDK is configured.
@@ -98,6 +100,13 @@ still requires a compatible device or emulator.
 GATT connection and measurement events use an in-process local broadcast
 channel, so other applications cannot publish spoofed state or heart-rate
 updates to the control activity or observe those event payloads.
+
+Heart Rate Measurement bytes are parsed through a dependency-free Java 7
+boundary before publication. The parser validates little-endian UINT8/UINT16
+BPM, sensor-contact flags, optional energy-expended and RR-interval fields,
+reserved bits, and complete packet consumption. The current UI continues to
+receive only the BPM string; optional health fields are neither logged nor
+broadcast.
 
 Use [`DEVICE_VERIFICATION.md`](DEVICE_VERIFICATION.md) for the exact-commit BLE
 sensor matrix. It covers scan/connect, service discovery, notification and
@@ -187,6 +196,8 @@ evidence, and explicit unexecuted rows.
   wrapper baseline.
 - See `docs/plans/2026-06-09-hrm-heart-rate-characteristic-match.md` for the
   heart-rate characteristic matching contract.
+- See `docs/plans/2026-06-26-explicit-heart-rate-parser.md` for the complete
+  Heart Rate Service packet parser and portable Java 7 verification boundary.
 - See `docs/plans/2026-06-09-hrm-notification-descriptor-guard.md` for the
   heart-rate notification descriptor contract.
 - See `docs/plans/2026-06-09-hrm-actionbar-guard.md` for the nullable ActionBar

@@ -6,6 +6,10 @@ BUILD_FILE="$ROOT_DIR/Application/build.gradle"
 CONTROL_ACTIVITY="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java"
 SCAN_ACTIVITY="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/DeviceScanActivity.java"
 BLE_SERVICE="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java"
+HEART_RATE_MEASUREMENT="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/HeartRateMeasurement.java"
+HEART_RATE_PARSER="$ROOT_DIR/Application/src/main/java/com/garethpaul/app/hrm/HeartRateMeasurementParser.java"
+HEART_RATE_PARSER_TEST="$ROOT_DIR/scripts/tests/HeartRateMeasurementParserTest.java"
+HEART_RATE_PARSER_RUNNER="$ROOT_DIR/scripts/test-heart-rate-parser.sh"
 MANIFEST="$ROOT_DIR/Application/src/main/AndroidManifest.xml"
 README="$ROOT_DIR/README.md"
 SECURITY="$ROOT_DIR/SECURITY.md"
@@ -32,6 +36,7 @@ SERVICE_AVAILABILITY_PLAN="$ROOT_DIR/docs/plans/2026-06-13-hrm-service-availabil
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 HOSTED_ANDROID_PLAN="$ROOT_DIR/docs/plans/2026-06-12-hosted-android-verification.md"
 WRAPPER_PLAN="$ROOT_DIR/docs/plans/2026-06-12-gradle-wrapper-verification.md"
+HEART_RATE_PARSER_PLAN="$ROOT_DIR/docs/plans/2026-06-26-explicit-heart-rate-parser.md"
 GRADLEW="$ROOT_DIR/gradlew"
 GRADLEW_BAT="$ROOT_DIR/gradlew.bat"
 WRAPPER_JAR="$ROOT_DIR/gradle/wrapper/gradle-wrapper.jar"
@@ -46,6 +51,11 @@ LINT_CONFIG="$ROOT_DIR/Application/lint.xml"
 
 for required_path in \
   "$ROOT_DIR/DEVICE_VERIFICATION.md" \
+  "$HEART_RATE_MEASUREMENT" \
+  "$HEART_RATE_PARSER" \
+  "$HEART_RATE_PARSER_TEST" \
+  "$HEART_RATE_PARSER_RUNNER" \
+  "$HEART_RATE_PARSER_PLAN" \
   "$DEVICE_VERIFICATION_PLAN" \
   "$LOCAL_BROADCAST_PLAN" \
   "$INITIALIZE_FAILURE_PLAN" \
@@ -677,28 +687,81 @@ if grep -Fq 'String.format("Received heart rate: %d"' "$BLE_SERVICE"; then
 fi
 
 for heart_rate_contract in \
-  "Integer flag = characteristic.getIntValue(" \
-  "BluetoothGattCharacteristic.FORMAT_UINT8," \
-  "if (flag == null)" \
-  "Heart rate measurement flags are unavailable." \
-  "final Integer heartRate = characteristic.getIntValue(format, 1);" \
-  "if (heartRate == null)" \
-  "Heart rate measurement value is unavailable."; do
+  "HeartRateMeasurementParser.parse(characteristic.getValue())" \
+  "if (measurement == null)" \
+  "Heart rate measurement packet is unavailable." \
+  "String.valueOf(measurement.beatsPerMinute())"; do
   if ! grep -Fq "$heart_rate_contract" "$BLE_SERVICE"; then
     printf '%s\n' "Missing heart-rate packet guard: $heart_rate_contract" >&2
     exit 1
   fi
 done
 
-if grep -Fq "int flag = characteristic.getProperties();" "$BLE_SERVICE"; then
-  printf '%s\n' "Heart-rate format flags must come from measurement data, not properties." >&2
+if grep -Fq "characteristic.getIntValue(" "$BLE_SERVICE"; then
+  printf '%s\n' "Heart-rate parsing must use the dependency-free packet parser." >&2
   exit 1
 fi
 
-if grep -Fq "final int heartRate = characteristic.getIntValue" "$BLE_SERVICE"; then
-  printf '%s\n' "Heart-rate parsing must not unbox a nullable characteristic value." >&2
+for parser_contract in \
+  "private static final int RESERVED_FLAGS = 0xe0;" \
+  "(flags & RESERVED_FLAGS) != 0" \
+  "(flags & SENSOR_CONTACT_SUPPORTED) == 0" \
+  "unsignedLittleEndian16(packet, offset)" \
+  "(flags & ENERGY_EXPENDED_PRESENT) != 0" \
+  "(flags & RR_INTERVAL_PRESENT) != 0" \
+  "remainingBytes < 2 || remainingBytes % 2 != 0" \
+  "if (offset != packet.length)"; do
+  if ! grep -Fq "$parser_contract" "$HEART_RATE_PARSER"; then
+    printf '%s\n' "Missing complete heart-rate parser contract: $parser_contract" >&2
+    exit 1
+  fi
+done
+
+if [ "$(grep -Fc "rrIntervals.clone()" "$HEART_RATE_MEASUREMENT")" -ne 2 ]; then
+  printf '%s\n' "Heart-rate RR intervals must remain immutable at both object boundaries." >&2
   exit 1
 fi
+
+if ! grep -Fq 'javac -source 7 -target 7' "$HEART_RATE_PARSER_RUNNER" || \
+   ! grep -Fq 'HeartRateMeasurementParser tests passed:' "$HEART_RATE_PARSER_TEST"; then
+  printf '%s\n' "The Java 7 heart-rate parser suite must remain executable." >&2
+  exit 1
+fi
+
+for parser_document in "$README" "$SECURITY" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! tr '\n' ' ' < "$parser_document" | tr -s '[:space:]' ' ' | \
+      grep -Fiq "dependency-free"; then
+    printf '%s\n' "$parser_document must document the dependency-free heart-rate parser." >&2
+    exit 1
+  fi
+done
+
+if grep -Fq "Add explicit heart-rate-service parsing" "$ROOT_DIR/VISION.md" || \
+   ! grep -Fq "Add tests around activity/service interaction" "$ROOT_DIR/VISION.md"; then
+  printf '%s\n' "VISION must retire complete packet parsing and retain interaction testing." >&2
+  exit 1
+fi
+
+for parser_plan_contract in \
+  "Status: Completed" \
+  "32 assertions" \
+  "Nineteen total BLE hostile mutations" \
+  "every applicable row in \`DEVICE_VERIFICATION.md\` remains \`not run\`"; do
+  if ! grep -Fq "$parser_plan_contract" "$HEART_RATE_PARSER_PLAN"; then
+    printf '%s\n' "Heart-rate parser plan must preserve completion evidence: $parser_plan_contract" >&2
+    exit 1
+  fi
+done
+
+for device_parser_row in \
+  "Valid contact, energy, and RR fields" \
+  "Reserved or inconsistent flags" \
+  "Missing, odd, or trailing optional bytes"; do
+  if ! grep -F "$device_parser_row" "$ROOT_DIR/DEVICE_VERIFICATION.md" | grep -Fq "not run"; then
+    printf '%s\n' "Device matrix must keep parser hardware evidence unexecuted: $device_parser_row" >&2
+    exit 1
+  fi
+done
 
 if grep -Fq "descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);" "$BLE_SERVICE"; then
   printf '%s\n' "Heart-rate notification disable path must not write the enable descriptor value." >&2
@@ -1196,7 +1259,7 @@ if grep -Fq '        sendBroadcast(intent);' "$BLE_SERVICE" || \
   printf '%s\n' "GATT events must not use framework broadcast publication or subscription." >&2
   exit 1
 fi
-if [ "$(grep -Fc 'sendGattBroadcast(intent);' "$BLE_SERVICE")" -ne 5 ]; then
+if [ "$(grep -Fc 'sendGattBroadcast(intent);' "$BLE_SERVICE")" -ne 4 ]; then
   printf '%s\n' "Every GATT event publication path must use the local broadcast helper." >&2
   exit 1
 fi
@@ -1276,13 +1339,13 @@ for unreviewed_gradle_entry in \
 done
 
 if [ ! -x "$ANDROID_RUNNER" ] || [ -L "$ANDROID_RUNNER" ] || \
-   [ "$(sha256_file "$ANDROID_RUNNER")" != "615d8eedd2de6aeabc852fa61d8235bb6bd09d74f7e71baa7e9025a1ebbd51fc" ]; then
+   [ "$(sha256_file "$ANDROID_RUNNER")" != "67bc532c8c84eb71c936980a89cac582bf98e243254c1d54522381a385345d37" ]; then
   printf '%s\n' "Android verification must retain the reviewed exact wrapper and SDK runner." >&2
   exit 1
 fi
 
 if [ ! -x "$PUBLICATION_GATE_TESTS" ] || [ -L "$PUBLICATION_GATE_TESTS" ] || \
-   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "687e7db1434a1f1eebddbc9e068f46951a0fb3cf95623d08bd2950a73a2e1ddb" ]; then
+   [ "$(sha256_file "$PUBLICATION_GATE_TESTS")" != "8c699de5328b540a881cee54a52e2dc0cfe3e24caae4c4c8a189b7786a143f94" ]; then
   printf '%s\n' "Publication-gate mutation tests must retain the reviewed contract." >&2
   exit 1
 fi
@@ -1293,7 +1356,7 @@ if [ ! -x "$ARCHIVE_VERIFIER" ] || [ -L "$ARCHIVE_VERIFIER" ] || \
   exit 1
 fi
 
-if ! grep -Fxq 'APPROVED_RUNNER_SHA256=615d8eedd2de6aeabc852fa61d8235bb6bd09d74f7e71baa7e9025a1ebbd51fc' "$PUBLICATION_GATE_TESTS"; then
+if ! grep -Fxq 'APPROVED_RUNNER_SHA256=67bc532c8c84eb71c936980a89cac582bf98e243254c1d54522381a385345d37' "$PUBLICATION_GATE_TESTS"; then
   printf '%s\n' "Publication-gate tests must independently pin the reviewed Android runner." >&2
   exit 1
 fi

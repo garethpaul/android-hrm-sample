@@ -193,35 +193,17 @@ public class BluetoothLeService extends Service {
             return;
         }
 
-        // This is special handling for the Heart Rate Measurement profile.  Data parsing is
-        // carried out as per profile specifications:
-        // http://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.heart_rate_measurement.xml
+        // Heart Rate Service packets are validated before publishing the BPM.
         if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
-            Integer flag = characteristic.getIntValue(
-                    BluetoothGattCharacteristic.FORMAT_UINT8,
-                    0);
-            if (flag == null) {
-                Log.w(TAG, "Heart rate measurement flags are unavailable.");
-                sendGattBroadcast(intent);
-                return;
-            }
-
-            int format = -1;
-            if ((flag & 0x01) != 0) {
-                format = BluetoothGattCharacteristic.FORMAT_UINT16;
-                Log.d(TAG, "Heart rate format UINT16.");
-            } else {
-                format = BluetoothGattCharacteristic.FORMAT_UINT8;
-                Log.d(TAG, "Heart rate format UINT8.");
-            }
-            final Integer heartRate = characteristic.getIntValue(format, 1);
-            if (heartRate == null) {
-                Log.w(TAG, "Heart rate measurement value is unavailable.");
+            final HeartRateMeasurement measurement =
+                    HeartRateMeasurementParser.parse(characteristic.getValue());
+            if (measurement == null) {
+                Log.w(TAG, "Heart rate measurement packet is unavailable.");
                 sendGattBroadcast(intent);
                 return;
             }
             Log.d(TAG, "Received heart rate measurement.");
-            intent.putExtra(EXTRA_DATA, String.valueOf(heartRate));
+            intent.putExtra(EXTRA_DATA, String.valueOf(measurement.beatsPerMinute()));
         } else {
             // For all other profiles, writes the data formatted in HEX.
             final byte[] data = characteristic.getValue();

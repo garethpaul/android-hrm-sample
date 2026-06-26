@@ -5,7 +5,7 @@ ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/android-hrm-publication-gate.XXXXXX")
 trap 'rm -rf "$TEST_ROOT"' EXIT HUP INT TERM
 FAILURES=0
-APPROVED_RUNNER_SHA256=615d8eedd2de6aeabc852fa61d8235bb6bd09d74f7e71baa7e9025a1ebbd51fc
+APPROVED_RUNNER_SHA256=67bc532c8c84eb71c936980a89cac582bf98e243254c1d54522381a385345d37
 
 if [ "$(sha256sum "$ROOT_DIR/scripts/run-android-verification.sh" | cut -d ' ' -f 1)" != "$APPROVED_RUNNER_SHA256" ]; then
   printf '%s\n' "The Android runner does not match the independently reviewed digest." >&2
@@ -324,7 +324,7 @@ exit 0
 EOF
 chmod +x scripts/run-android-verification.sh
 new_hash=$(sha256sum scripts/run-android-verification.sh | cut -d " " -f 1)
-sed -i.bak "s/615d8eedd2de6aeabc852fa61d8235bb6bd09d74f7e71baa7e9025a1ebbd51fc/$new_hash/g" scripts/check-baseline.sh
+sed -i.bak "s/67bc532c8c84eb71c936980a89cac582bf98e243254c1d54522381a385345d37/$new_hash/g" scripts/check-baseline.sh
 rm scripts/check-baseline.sh.bak'
 expect_rejected appended-application-gradle-forgery \
   'Application Gradle build definition must retain the reviewed Android plugin tasks.' \

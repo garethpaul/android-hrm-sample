@@ -1,5 +1,58 @@
 # Changes
 
+## 2026-06-26T12:22:11Z — P2 correctness — cycle: complete Heart Rate Service parser
+
+### Summary
+
+Replaced Android-dependent BPM extraction with complete, dependency-free,
+deterministic Heart Rate Service packet validation while preserving the
+sample's BPM-only UI.
+
+### Work completed
+
+- Added Java 7 parsing for UINT8/UINT16 BPM, contact, energy-expended, and RR
+  fields in Bluetooth SIG little-endian order.
+- Rejected reserved, inconsistent, truncated, missing-RR, odd-RR, and trailing
+  packet data before any measurement publication.
+- Added 32 parser assertions, eight parser-specific hostile mutations, static
+  contracts, exact-head runner integration, and updated public/device guidance.
+
+### Threads
+
+- None; work was completed directly after confirming no open PR, issue, or
+  unpublished local branch owned the parser roadmap item.
+
+### Files changed
+
+- `HeartRateMeasurement*.java` — immutable parsed data and complete packet parser.
+- `BluetoothLeService.java` — parser delegation and compatible BPM publication.
+- `scripts/` — portable, hostile-mutation, and exact-head verification.
+- `README.md`, `SECURITY.md`, `VISION.md`, `DEVICE_VERIFICATION.md`, and
+  `docs/plans/` — behavior, privacy, design, evidence, and remaining hardware scope.
+
+### Validation
+
+- `./scripts/test-heart-rate-parser.sh` — 32 assertions passed after the
+  intentional missing-class RED failure.
+- `./scripts/test-ble-mutations.sh` — all 19 hostile mutations rejected.
+- Portable source, session, archive, publication, shell, and diff gates passed.
+
+### Bugs / findings
+
+- The old service validated only the BPM prefix and could accept malformed
+  optional Heart Rate Service fields that were never inspected.
+
+### Blockers
+
+- No local Android SDK, emulator, phone, BLE sensor, or live GATT flow was used;
+  authenticated hosted Android verification and the explicit device matrix
+  remain the authority for those scopes.
+
+### Next action
+
+- Execute the exact-head hosted Android and CodeQL gates, then merge only that
+  reviewed SHA.
+
 ## 2026-06-26T01:10:00Z — P2 privacy — cycle: BLE data-event logging
 
 - Threads: selected the next explicitly licensed stale repository, confirmed

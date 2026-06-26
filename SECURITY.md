@@ -65,6 +65,10 @@ Helpful reports include:
   remains idempotent across callback, activity teardown, and replacement races.
 - GATT connection, discovery, and heart-rate events use an in-process local
   broadcast channel instead of accepting or publishing framework broadcasts.
+- Heart Rate Service packets must pass the dependency-free full-packet parser
+  before BPM publication; reserved flags, inconsistent contact state,
+  truncated optional fields, malformed RR intervals, and trailing bytes fail
+  closed without logging or broadcasting health values.
 - Pinned, read-only GitHub Actions checks out the reviewed head and invokes the
   exact Android runner with the hosted API 22 SDK and Java 8 toolchain.
 - The pinned GitHub Actions `Check` workflow is the only supported authenticated
