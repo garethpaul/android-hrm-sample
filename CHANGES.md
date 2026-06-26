@@ -19,7 +19,11 @@
 - Blockers: local Make is intentionally unsupported and no Android SDK, device,
   sensor, or live BLE flow is claimed; hosted authenticated verification is
   authoritative for the Android build.
-- Next: require exact-head review and hosted Android/CodeQL checks before merge.
+- Hosted: implementation head `c6c4be5` passed the authenticated Java 8/API 22
+  Android check and CodeQL for Actions, Java/Kotlin, and Python. Exact-head
+  Codex review reported no actionable findings.
+- Next: revalidate this documentation-only head, merge PR #21, and synchronize
+  `master`.
 
 ## 2026-06-25T20:50:56Z — P1 privacy — cycle: GATT UUID logging
 

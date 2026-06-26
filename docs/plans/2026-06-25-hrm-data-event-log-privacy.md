@@ -20,5 +20,6 @@ measurements.
 - The pre-fix source contract failed while the routine data-event log remained.
 - Portable source, Java session, baseline, publication-gate, and hostile
   mutation checks pass after removal.
-- Hosted Android and CodeQL checks plus exact-head Codex review remain required
-  before merge.
+- Implementation head `c6c4be5` passed the authenticated Java 8/API 22 Android
+  check and CodeQL for Actions, Java/Kotlin, and Python. Exact-head Codex review
+  reported no actionable findings.
