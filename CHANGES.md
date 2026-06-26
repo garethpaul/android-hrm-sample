@@ -1,5 +1,30 @@
 # Changes
 
+## 2026-06-26T01:10:00Z — P2 privacy — cycle: BLE data-event logging
+
+- Threads: selected the next explicitly licensed stale repository, confirmed
+  no open work, and reviewed BLE callbacks, logs, lifecycle ownership, portable
+  contracts, and authenticated Android publication boundaries.
+- Bug fixed: every `ACTION_DATA_AVAILABLE` broadcast wrote a verbose log entry;
+  timestamps could reveal BLE measurement activity and the log added no useful
+  diagnostic context.
+- Fix: removed the routine data-event log while preserving in-process broadcast
+  handling and UI display of available measurements.
+- Contracts: portable verification now rejects the original log and a hostile
+  mutation that restores it; privacy guidance covers event timing as well as
+  identifiers and values.
+- Validation: the pre-fix contract failed on the log. Source contracts, Java
+  session guards, eleven hostile BLE mutations, the archive baseline,
+  publication-gate mutation suite, and `git diff --check` passed after removal.
+- Blockers: local Make is intentionally unsupported and no Android SDK, device,
+  sensor, or live BLE flow is claimed; hosted authenticated verification is
+  authoritative for the Android build.
+- Hosted: implementation head `c6c4be5` passed the authenticated Java 8/API 22
+  Android check and CodeQL for Actions, Java/Kotlin, and Python. Exact-head
+  Codex review reported no actionable findings.
+- Next: revalidate this documentation-only head, merge PR #21, and synchronize
+  `master`.
+
 ## 2026-06-25T20:50:56Z — P1 privacy — cycle: GATT UUID logging
 
 - Threads: inspected BLE scan, service, callback, characteristic discovery,

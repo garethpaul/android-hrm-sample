@@ -119,6 +119,8 @@ evidence, and explicit unexecuted rows.
   values are not written to debug logs.
 - Discovered GATT UUIDs and other BLE identifiers are also omitted from
   routine characteristic-discovery logs.
+- Routine data-available broadcasts are not logged, avoiding a timestamped
+  record of BLE measurement activity even when values are omitted.
 - The explicit HRM component export boundary exposes only the launcher
   activity; the device-control activity and BLE service remain app-internal.
 - BLE scan startup guards unsupported devices and missing Bluetooth manager
