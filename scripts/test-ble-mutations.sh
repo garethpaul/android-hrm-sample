@@ -47,6 +47,9 @@ expect_rejected location-permission-removal \
 expect_rejected gatt-uuid-log-restoration \
   "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java'; s=open(p).read().replace('                    mBluetoothLeService.setCharacteristicNotification(gattCharacteristic, true);', '                    Log.v(\\\"loop\\\", uuid);\\n                    mBluetoothLeService.setCharacteristicNotification(gattCharacteristic, true);', 1); open(p,'w').write(s)\"" \
   "./scripts/test-ble-source-contracts.py"
+expect_rejected data-event-log-restoration \
+  "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/DeviceControlActivity.java'; s=open(p).read().replace('                displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));', '                Log.v(\\\"received\\\", \\\"data\\\");\\n                displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));', 1); open(p,'w').write(s)\"" \
+  "./scripts/test-ble-source-contracts.py"
 expect_rejected permission-exception-guard-removal \
   "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/DeviceScanActivity.java'; s=open(p).read().replace('catch (SecurityException securityException)', 'catch (RuntimeException runtimeException)'); open(p,'w').write(s)\"" \
   "./scripts/test-ble-source-contracts.py"

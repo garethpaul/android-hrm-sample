@@ -39,6 +39,7 @@ assert scan.count("catch (SecurityException securityException)") >= 2
 
 assert "clearGattSelectionState();" in control
 assert 'Log.v("loop", uuid);' not in control, "GATT UUIDs must not be logged"
+assert 'Log.v("received", "data");' not in control, "BLE data events must not be routinely logged"
 assert '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>' in manifest
 
 print("BLE source contracts passed.")

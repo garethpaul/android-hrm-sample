@@ -101,7 +101,6 @@ public class DeviceControlActivity extends Activity {
                 // Show all the supported services and characteristics on the user interface.
                 displayGattServices(mBluetoothLeService.getSupportedGattServices());
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                Log.v("received", "data");
                 displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
             }
         }
