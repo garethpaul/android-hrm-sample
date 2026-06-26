@@ -30,8 +30,10 @@ Priority:
 - BLE scan-list selections reject unavailable adapters and out-of-range positions before device lookup.
 - Keep heart-rate characteristic matching tied to standard GATT UUIDs
 - Keep routine BLE data-event timing out of logs
-- Parse heart-rate format flags from measurement data and reject truncated
-  packets safely
+- Parse complete Heart Rate Service measurement packets through a dependency-free
+  Java 7 boundary, including little-endian BPM, contact, energy, and RR fields
+- Reject reserved, inconsistent, truncated, or trailing heart-rate packet data
+  before publishing the existing BPM-only update
 - Keep heart-rate notification descriptor writes null-safe and reversible
 - Keep descriptor writes gated on successful local notification registration
 - Ensure descriptor-phase failures roll back local notification state
@@ -62,11 +64,9 @@ Priority:
 
 Next priorities:
 
-- Add explicit heart-rate-service parsing if this repo is used beyond the base
-  GATT sample
 - Evaluate Gradle runtime, SDK, support-library, and permission modernization
   together in a dedicated compatibility pass; wrapper hardening is separate
-- Add tests around characteristic parsing and activity/service interaction
+- Add tests around activity/service interaction
 - Document manual BLE device verification steps
 - Execute the HRM device verification matrix with an authorized sensor and
   privacy-safe evidence

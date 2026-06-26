@@ -42,7 +42,10 @@ unexecuted rows. Do not convert `not run` into passing evidence.
 | Descriptor callback failure | Matching pending registration rolls back once. | not run | |
 | Stale descriptor callback | Old GATT or descriptor cannot affect current state. | not run | |
 | Valid 8-bit and 16-bit packet | Measurement displays with correct format. | not run | |
+| Valid contact, energy, and RR fields | Full packet is accepted while only BPM reaches the current UI. | not run | |
 | Truncated packet | Data is ignored without a crash or stale display update. | not run | |
+| Reserved or inconsistent flags | Data is ignored without a crash or health-value log. | not run | |
+| Missing, odd, or trailing optional bytes | Entire packet is rejected without partial publication. | not run | |
 
 ## Lifecycle And Race Matrix
 

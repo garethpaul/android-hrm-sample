@@ -100,6 +100,7 @@ mkdir "$BUILD_ROOT"
 /usr/bin/python3 "$ARCHIVE_VERIFIER" "$SOURCE_ROOT" "$EXPECTED_COMMIT" "$BUILD_ROOT"
 
 "$BUILD_ROOT/scripts/check-baseline.sh"
+"$BUILD_ROOT/scripts/test-heart-rate-parser.sh"
 
 if ! (
   cd "$BUILD_ROOT"

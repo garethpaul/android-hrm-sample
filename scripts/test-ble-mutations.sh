@@ -59,5 +59,29 @@ expect_rejected generation-always-current \
 expect_rejected release-unowned-gatt \
   "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/GattConnectionOwner.java'; s=open(p).read().replace('if (!isCurrent(candidate)) {', 'if (candidate == null) {'); open(p,'w').write(s)\"" \
   "./scripts/test-ble-session-guards.sh"
+expect_rejected heart-rate-parser-bypass \
+  "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/BluetoothLeService.java'; s=open(p).read().replace('HeartRateMeasurementParser.parse(characteristic.getValue())', 'null', 1); open(p,'w').write(s)\"" \
+  "./scripts/test-ble-source-contracts.py"
+expect_rejected heart-rate-reserved-flags \
+  "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/HeartRateMeasurementParser.java'; s=open(p).read().replace('(flags & RESERVED_FLAGS) != 0', 'false', 1); open(p,'w').write(s)\"" \
+  "./scripts/test-heart-rate-parser.sh"
+expect_rejected heart-rate-byte-order \
+  "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/HeartRateMeasurementParser.java'; s=open(p).read().replace('unsignedByte(packet[offset]) | unsignedByte(packet[offset + 1]) << 8', 'unsignedByte(packet[offset]) << 8 | unsignedByte(packet[offset + 1])', 1); open(p,'w').write(s)\"" \
+  "./scripts/test-heart-rate-parser.sh"
+expect_rejected heart-rate-contact-support \
+  "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/HeartRateMeasurementParser.java'; s=open(p).read().replace('(flags & SENSOR_CONTACT_SUPPORTED) == 0', 'false', 1); open(p,'w').write(s)\"" \
+  "./scripts/test-heart-rate-parser.sh"
+expect_rejected heart-rate-energy-offset \
+  "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/HeartRateMeasurementParser.java'; s=open(p).read().replace('            offset += 2;', '            offset += 0;', 1); open(p,'w').write(s)\"" \
+  "./scripts/test-heart-rate-parser.sh"
+expect_rejected heart-rate-empty-rr \
+  "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/HeartRateMeasurementParser.java'; s=open(p).read().replace('remainingBytes < 2 ||', 'remainingBytes < 0 ||', 1); open(p,'w').write(s)\"" \
+  "./scripts/test-heart-rate-parser.sh"
+expect_rejected heart-rate-trailing-bytes \
+  "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/HeartRateMeasurementParser.java'; s=open(p).read().replace('if (offset != packet.length)', 'if (false)', 1); open(p,'w').write(s)\"" \
+  "./scripts/test-heart-rate-parser.sh"
+expect_rejected heart-rate-rr-alias \
+  "python3 -c \"p='Application/src/main/java/com/garethpaul/app/hrm/HeartRateMeasurement.java'; s=open(p).read().replace('return rrIntervals.clone();', 'return rrIntervals;', 1); open(p,'w').write(s)\"" \
+  "./scripts/test-heart-rate-parser.sh"
 
 printf '%s\n' "BLE hostile mutations passed."
